@@ -1,0 +1,35 @@
+import os
+from pydantic_settings import BaseSettings
+from typing import List, Dict, Any, Optional
+
+class Settings(BaseSettings):
+    """アプリケーション設定"""
+    # アプリ基本設定
+    APP_NAME: str = "AnimeImageGenerator"
+    DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
+    
+    # モデルパス設定
+    DART_MODEL_PATH: str = os.getenv("DART_MODEL_PATH", "./models/dart")
+    SD_MODEL_PATH: str = os.getenv("SD_MODEL_PATH", "./models/animagine")
+    
+    # RAG設定
+    VECTOR_DB_PATH: str = os.getenv("VECTOR_DB_PATH", "./data/faiss")
+    
+    # 画像生成デフォルト設定
+    DEFAULT_STEPS: int = int(os.getenv("DEFAULT_STEPS", "20"))
+    DEFAULT_CFG_SCALE: float = float(os.getenv("DEFAULT_CFG_SCALE", "7.0"))
+    DEFAULT_WIDTH: int = int(os.getenv("DEFAULT_WIDTH", "512"))
+    DEFAULT_HEIGHT: int = int(os.getenv("DEFAULT_HEIGHT", "768"))
+    
+    # APIキー設定（オプション）
+    API_KEY: Optional[str] = os.getenv("API_KEY")
+    REQUIRE_API_KEY: bool = os.getenv("REQUIRE_API_KEY", "False").lower() == "true"
+    
+    # LLM設定
+    LLM_TYPE: str = os.getenv("LLM_TYPE", "openai")  # openai, llama, etc.
+    OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
+
+    class Config:
+        env_file = ".env"
+
+settings = Settings() 

@@ -1,0 +1,30 @@
+# API基盤
+fastapi==0.103.1
+uvicorn==0.23.2
+pydantic==2.3.0
+pydantic-settings==2.0.3
+
+# LangChain関連
+langchain==0.0.267
+faiss-cpu==1.7.4
+openai==0.28.0
+
+# 画像生成関連
+diffusers==0.21.2
+transformers==4.33.1
+accelerate==0.22.0
+xformers==0.0.21
+safetensors==0.3.3
+pillow==10.0.0
+
+# ユーティリティ
+python-dotenv==1.0.0
+httpx==0.24.1
+torch==2.0.1
+numpy==1.24.3
+
+# RAGデータセット処理用
+datasets==2.14.5
+sentence-transformers==2.2.2
+pandas==2.0.3
+faiss-gpu==1.7.2 
