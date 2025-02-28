@@ -1,0 +1,26 @@
+---
+description: コードや回答の生成時に毎回必ず守るルール / Rules to follow every time you generate code or an answer
+globs: 
+alwaysApply: false
+---
+# 回答方法
+日本語で応答してください。
+
+# 毎回適用されるルール
+- [README.md](mdc:README.md) に要件定義が記載されています。
+- [file_dependencies.md](mdc:file_dependencies.md) にファイルごとの依存関係が記載されています。
+- [README.md](mdc:README.md) と [file_dependencies.md](mdc:file_dependencies.md) を毎回確認し、それに則った実装をしてください。
+- 新規作成するファイルがあるときにはその役割と機能、詳細等を [README.md](mdc:README.md) に追記し、依存関係も [file_dependencies.md](mdc:file_dependencies.md) に追記してください。
+- 削除・編集するファイルやコードがあるときにはその役割と機能、詳細等を [README.md](mdc:README.md) に追記し、依存関係も [file_dependencies.md](mdc:file_dependencies.md) に追記してください。「編集した」という旨は書かず、最終的な機能について記載してください。
+
+--------------------------------
+
+# How to answer
+Please respond in Japanese.
+
+# Rules that apply every time
+- The requirements definition is written in [README.md](mdc:README.md).
+- The dependencies for each file are written in [file_dependencies.md](mdc:file_dependencies.md).
+- Check [README.md](mdc:README.md) and [file_dependencies.md](mdc:file_dependencies.md) every time and implement accordingly.
+- When there is a new file to be created, add its role, function, details, etc. to [README.md](mdc:README.md)d, and also add dependencies to [file_dependencies.md](mdc:file_dependencies.md).
+- When there is a file or code to be deleted or edited, add its role, function, details, etc. to [README.md](mdc:README.md), and also add dependencies to [file_dependencies.md](mdc:file_dependencies.md)s.md. Do not write that you have "edited" it, but write about the final function.

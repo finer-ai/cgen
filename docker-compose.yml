@@ -1,0 +1,31 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sotai-generator
+    ports:
+      - "8000:8000"
+    volumes:
+      # アプリケーションコード
+      - ./app:/app/app
+      # モデルとデータのディレクトリ
+      - ./models:/app/models
+      # 環境変数
+      - ./.env:/app/.env:ro
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

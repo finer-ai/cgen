@@ -1,16 +1,21 @@
 import os
 import json
 from typing import List, Dict, Any
-from langchain.vectorstores import FAISS
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.llms import OpenAI
+from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_openai import OpenAI
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-from langchain.retrievers import VectorStoreRetriever
+from langchain.output_parsers import PydanticOutputParser
+from pydantic import BaseModel, Field
 
 from core.config import settings
 from core.errors import RAGError
 from utils.tag_utils import clean_tags
+
+class KeywordsOutput(BaseModel):
+    """キーワード抽出の出力形式"""
+    keywords: List[str] = Field(description="抽出されたキーワードのリスト")
 
 class RAGService:
     """RAGによるタグ候補抽出サービス"""
@@ -18,13 +23,14 @@ class RAGService:
     def __init__(self):
         """初期化"""
         # 埋め込みモデル設定
-        self.embeddings = OpenAIEmbeddings(openai_api_key=settings.OPENAI_API_KEY)
+        self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
         
         # ベクトルDB読み込み
         if os.path.exists(settings.VECTOR_DB_PATH):
             self.vector_store = FAISS.load_local(
                 settings.VECTOR_DB_PATH, 
-                self.embeddings
+                self.embeddings,
+                allow_dangerous_deserialization=True  # 信頼できるローカルファイルの場合のみTrueに設定
             )
             self.retriever = self.vector_store.as_retriever(
                 search_kwargs={"k": 10}
@@ -35,31 +41,43 @@ class RAGService:
         # LLM設定
         self.llm = OpenAI(temperature=0.1, openai_api_key=settings.OPENAI_API_KEY)
         
+        # 出力パーサーの設定
+        self.parser = PydanticOutputParser(pydantic_object=KeywordsOutput)
+        
         # キーワード抽出用プロンプト
         self.keyword_prompt = PromptTemplate(
-            input_variables=["query"],
+            input_variables=["query", "format_instructions"],
             template="""
             以下の説明文から、画像生成に役立つキーワードを抽出してください。
-            日本語と英語の両方を含めて構いません。
+            説明文は日本語に限りませんが、出力は英語にしてください。
             
             説明文: {query}
             
-            抽出したキーワードをJSON形式で返してください:
-            {"keywords": ["キーワード1", "キーワード2", ...]}
+            {format_instructions}
             """
         )
         
-        self.keyword_chain = LLMChain(llm=self.llm, prompt=self.keyword_prompt)
+        self.keyword_chain = LLMChain(
+            llm=self.llm,
+            prompt=self.keyword_prompt,
+            output_parser=self.parser
+        )
     
     async def extract_keywords(self, query: str) -> List[str]:
         """ユーザー入力からキーワードを抽出"""
         try:
-            result = await self.keyword_chain.arun(query=query)
-            # JSON部分を抽出
-            json_str = result.strip()
-            if "```json" in json_str:
-                json_str = json_str.split("```json")[1].split("```")[0].strip()
-            return json.loads(json_str)["keywords"]
+            # パーサーのフォーマット指示を取得
+            format_instructions = self.parser.get_format_instructions()
+            
+            # キーワード抽出を実行
+            result = await self.keyword_chain.arun(
+                query=query,
+                format_instructions=format_instructions
+            )
+            
+            # 結果は既にパース済みのKeywordsOutputオブジェクト
+            return result.keywords
+            
         except Exception as e:
             raise RAGError(f"キーワード抽出中にエラーが発生しました: {str(e)}")
     
@@ -89,6 +107,8 @@ class RAGService:
         """プロンプトからタグ候補を生成する統合メソッド"""
         # キーワード抽出
         keywords = await self.extract_keywords(prompt)
+        print('keywords', keywords)
         # 関連タグ取得
         candidates = await self.retrieve_tags(keywords)
+        print('candidates', candidates)
         return candidates 

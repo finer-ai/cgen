@@ -10,10 +10,12 @@ class Settings(BaseSettings):
     
     # モデルパス設定
     DART_MODEL_PATH: str = os.getenv("DART_MODEL_PATH", "./models/dart")
+    DART_REPO_ID: str = os.getenv("DART_REPO_ID", "p1atdev/dart-v2-moe-sft")
     SD_MODEL_PATH: str = os.getenv("SD_MODEL_PATH", "./models/animagine")
+    SD_REPO_ID: str = os.getenv("SD_REPO_ID", "cagliostrolab/animagine-xl-4.0")
     
     # RAG設定
-    VECTOR_DB_PATH: str = os.getenv("VECTOR_DB_PATH", "./data/faiss")
+    VECTOR_DB_PATH: str = os.getenv("VECTOR_DB_PATH", "./app/data/faiss")
     
     # 画像生成デフォルト設定
     DEFAULT_STEPS: int = int(os.getenv("DEFAULT_STEPS", "20"))

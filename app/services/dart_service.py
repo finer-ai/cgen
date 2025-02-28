@@ -10,17 +10,17 @@ class DartService:
     """Dartによるタグ補完サービス"""
     
     def __init__(self):
-        """初期化"""
-        try:
+        # """初期化"""
+        # try:
             # Dartモデルとトークナイザーの読み込み
-            self.tokenizer = AutoTokenizer.from_pretrained(settings.DART_MODEL_PATH)
+            self.tokenizer = AutoTokenizer.from_pretrained(settings.DART_REPO_ID)
             self.model = AutoModelForCausalLM.from_pretrained(
-                settings.DART_MODEL_PATH,
+                settings.DART_REPO_ID,
                 torch_dtype=torch.float16,
                 device_map="auto"
             )
-        except Exception as e:
-            raise DartError(f"Dartモデルの読み込みに失敗しました: {str(e)}")
+        # except Exception as e:
+        #     raise DartError(f"Dartモデルの読み込みに失敗しました: {str(e)}")
     
     def _format_input_for_dart(self, tag_candidates: List[str]) -> str:
         """Dart入力用フォーマットに変換"""
@@ -28,7 +28,13 @@ class DartService:
         tags_str = ",".join(tag_candidates)
         
         # Dartの入力フォーマットに変換
-        formatted_input = f"<|bos|><rating>general</rating><general>{tags_str}<|long|><|input_end|>"
+        formatted_input = (
+            f"<|bos|>"
+            f"<copyright></copyright>"
+            f"<character></character>"
+            f"<|rating:general|><|aspect_ratio:tall|><|length:long|>"
+            f"<general>{tags_str}"
+        )
         return formatted_input
     
     async def generate_final_tags(self, tag_candidates: List[str]) -> List[str]:
@@ -38,17 +44,25 @@ class DartService:
             dart_input = self._format_input_for_dart(tag_candidates)
             
             # トークン化
-            inputs = self.tokenizer(dart_input, return_tensors="pt").to(self.model.device)
+            inputs = self.tokenizer(
+                dart_input,
+                return_tensors="pt",
+                add_special_tokens=True,
+                padding=True,
+                return_token_type_ids=False  # token_type_idsを無効化
+            ).to(self.model.device)
             
             # 補完生成
             with torch.no_grad():
                 outputs = self.model.generate(
-                    **inputs,
+                    inputs.input_ids,
+                    attention_mask=inputs.attention_mask,
                     max_new_tokens=256,
                     do_sample=True,
                     temperature=0.5,
                     top_p=0.9,
-                    repetition_penalty=1.2
+                    repetition_penalty=1.2,
+                    pad_token_id=self.tokenizer.eos_token_id
                 )
             
             # デコード

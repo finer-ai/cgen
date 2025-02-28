@@ -14,6 +14,10 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# python3.11をインストール
+RUN apt update && apt install python3.11 -y \
+    && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+
 # 作業ディレクトリの設定
 WORKDIR /app
 
@@ -23,16 +27,6 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 
 # アプリケーションファイルのコピー
 COPY ./app /app/
-COPY ./scripts /app/scripts/
-
-# 必要なディレクトリの作成
-RUN mkdir -p /app/models /app/data
-
-# スクリプトに実行権限を付与
-RUN chmod +x /app/scripts/download_models.sh
-
-# Hugging Face Hub認証用の環境変数（オプション）
-ENV HUGGINGFACE_TOKEN=""
 
 # ポートの公開
 EXPOSE 8000

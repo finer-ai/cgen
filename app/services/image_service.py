@@ -5,7 +5,7 @@ import base64
 import io
 from PIL import Image
 import torch
-from diffusers import StableDiffusionPipeline, DPMSolverMultistepScheduler
+from diffusers import StableDiffusionXLPipeline, DPMSolverMultistepScheduler
 
 from core.config import settings
 from core.errors import ImageGenerationError
@@ -14,13 +14,14 @@ class ImageService:
     """画像生成サービス"""
     
     def __init__(self):
-        """初期化"""
-        try:
-            # Stable Diffusion (Animagine) モデルのロード
-            self.pipe = StableDiffusionPipeline.from_pretrained(
+        # """初期化"""
+        # try:
+            # Stable Diffusion XL モデルのロード
+            self.pipe = StableDiffusionXLPipeline.from_single_file(
                 settings.SD_MODEL_PATH,
                 torch_dtype=torch.float16,
-                safety_checker=None  # 安全性チェッカーは別途実装
+                use_safetensors=True,
+                variant="fp16"
             )
             
             # スケジューラー設定
@@ -37,8 +38,8 @@ class ImageService:
             # メモリ効率化
             self.pipe.enable_xformers_memory_efficient_attention()
         
-        except Exception as e:
-            raise ImageGenerationError(f"画像生成モデルの読み込みに失敗しました: {str(e)}")
+        # except Exception as e:
+        #     raise ImageGenerationError(f"画像生成モデルの読み込みに失敗しました: {str(e)}")
     
     async def generate_image(
         self,
