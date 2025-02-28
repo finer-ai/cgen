@@ -1,0 +1,9 @@
+/venv
+/data
+/models
+/app/models
+/app/data
+
+__pycache__
+
+.env
