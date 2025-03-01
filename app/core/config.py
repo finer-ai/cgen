@@ -13,7 +13,11 @@ class Settings(BaseSettings):
     DART_REPO_ID: str = os.getenv("DART_REPO_ID", "p1atdev/dart-v2-moe-sft")
     SD_MODEL_PATH: str = os.getenv("SD_MODEL_PATH", "./models/animagine-xl-4.0.safetensors")
     SD_REPO_ID: str = os.getenv("SD_REPO_ID", "cagliostrolab/animagine-xl-4.0")
-    
+    LLAMA_MODEL_PATH: str = os.getenv("LLAMA_MODEL_PATH", "./models/llama3.1")
+    LLAMA_REPO_ID: str = os.getenv("LLAMA_REPO_ID", "meta-llama/Llama-3.1-8B-Instruct")
+    MISTRAL_MODEL_PATH: str = os.getenv("MISTRAL_MODEL_PATH", "./models/mistral")
+    MISTRAL_REPO_ID: str = os.getenv("MISTRAL_REPO_ID", "mistralai/Mistral-7B-v0.1")
+
     # RAG設定
     VECTOR_DB_PATH: str = os.getenv("VECTOR_DB_PATH", "./data/faiss")
     
@@ -30,6 +34,7 @@ class Settings(BaseSettings):
     # LLM設定
     LLM_TYPE: str = os.getenv("LLM_TYPE", "openai")  # openai, llama, etc.
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
+    HF_TOKEN: Optional[str] = os.getenv("HF_TOKEN")
 
     class Config:
         env_file = ".env"

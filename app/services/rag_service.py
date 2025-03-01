@@ -1,13 +1,9 @@
 import os
 import re
-from pathlib import Path
-import pandas as pd
-
-from langchain_openai import OpenAI
+import torch
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
 from langchain_core.runnables import RunnableSequence
 from langchain_core.output_parsers import StrOutputParser
 
@@ -15,10 +11,15 @@ from core.config import settings
 from core.errors import RAGError
 from utils.tag_utils import clean_tags
 
+from tqdm import tqdm
+
 class RAGService:
     """RAGによるタグ候補抽出サービス"""
 
-    def __init__(self):
+    def __init__(self, llm):
+        # GPUが利用可能な場合はGPUを使用
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        
         # 埋め込みモデル設定（retrieval用）
         self.embeddings = HuggingFaceEmbeddings(
             model_name="all-MiniLM-L6-v2",
@@ -36,25 +37,35 @@ class RAGService:
             raise RAGError("ベクトルDBが見つかりません。初期化が必要です。")
         
         # Retrieverの設定（検索件数k）
-        self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 20})
+        self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 5})
         
-        # LLMの設定（現状はOpenAIを利用、将来的にLlamaへの切り替え可能）
-        self.llm = OpenAI(temperature=0.1, openai_api_key=settings.OPENAI_API_KEY)
+        # LLMの設定
+        self.llm = llm
         
         # キーワード（＝タグ候補）抽出用LLMChain（シーン説明からカンマ区切りのタグ候補を生成）
-        rich_description_template = """
-Generate a detailed comma-separated list of up to 20 Danbooru tags for this scene. Include character count, group tags, and all relevant details:
-- Use 'solo' for a single character (human, humanoid, or non-humanoid)
-- Use '1boy' or '1girl' for a single human or humanoid character (including orcs, elves, etc.) along with 'solo'
-- Use '1other' for a single non-humanoid character along with 'solo'
-- Use appropriate tags for multiple characters ('2boys', 'multiple_girls', etc.)
-- Include species tags (e.g., 'orc', 'elf') along with character count tags when applicable
-Scene description: {scene_description}
-Tags (up to 20):
+        self.num_candidates = 20
+        rich_description_template = f"""
+Generate Danbooru tags from the prompt. The prompt may either be a question or instruction requesting a scene to be drawn, or a direct description of the desired scene without a question.
+First, extract the scene. Then, generate up to {self.num_candidates} Danbooru tags, separated by commas, detailing all relevant aspects including character count, group tags, and other necessary details.
+
+Important character count rules:
+- Unless explicitly specified otherwise in the prompt, assume there is only one character.
+- For a single character, use exactly one character tag (e.g., '1girl', '1boy', or '1other') along with 'solo'.
+- For multiple characters, use tags that match the exact number of characters (e.g., '2girls', '2boys', 'multiple_girls').
+- When gender is not explicitly specified in the prompt, prioritize using '1girl' over '1boy'.
+
+Additional rules:
+- If there is a single human or humanoid character (including orcs, elves, etc.), use 'solo' along with '1boy' or '1girl'.
+- If there is a single non-humanoid character, use 'solo' along with '1other'.
+- If applicable, combine species tags (e.g., 'orc', 'elf') with character count tags.
+
+Prompt: {{prompt}}
+Tags (up to {self.num_candidates}):
 """
+
         self.rich_description_prompt = PromptTemplate(
             template=rich_description_template,
-            input_variables=["scene_description"]
+            input_variables=["prompt"]
         )
         self.rich_description_chain = RunnableSequence(
             self.rich_description_prompt | self.llm | StrOutputParser()
@@ -80,6 +91,7 @@ Rules:
 9. Do not use square brackets or double square brackets around tags.
 10. Match all relevant tags, including those for background, clothing, expressions, and actions.
 11. For humanoid characters like orcs, elves, etc., use appropriate character count tags ('1boy', '1girl', etc.) along with their species tag.
+
 Context: {context}
 Input: {query}
 Output:
@@ -88,55 +100,59 @@ Output:
             template=tag_response_template,
             input_variables=["context", "query"]
         )
-        self.tag_response_chain = self.tag_response_prompt | self.llm | StrOutputParser()
-    
-    async def extract_keywords(self, query: str) -> list:
+        self.tag_response_chain = self.tag_response_prompt | self.llm.bind(stop=["\n"])
+        
+    async def extract_elements(self, query: str) -> list:
         """
         シーン説明からDanbooruタグ候補（キーワード）を抽出する。
         出力はカンマ区切りの文字列を分割してList[str]に変換。
         """
-        result = await self.rich_description_chain.ainvoke({"scene_description": query})
+        result = await self.rich_description_chain.ainvoke({"prompt": query})
         # カンマで分割し、前後の空白を除去
-        keywords = [word.strip() for word in result.split(",") if word.strip()]
-        return keywords
+        elements = [word.strip() for word in result.split(",") if word.strip()]
+        return elements
 
-    async def retrieve_tags(self, keywords: list) -> list:
+    async def retrieve_tags(self, elements: list) -> list:
         """
         キーワードごとにretrieverから関連文脈を取得し、
         tag_response_chainで各キーワードの正確なタグを補正する。
         """
         refined_tags = []
         seen = set()
-        for keyword in keywords:
-            docs = self.retriever.invoke(keyword)
-            page_contents = [doc.page_content for doc in docs]
-            tags = [page_content.split(':')[0] for page_content in page_contents]
-            print('tags', tags)
-            context_str = ", ".join(tags)
-            result = await self.tag_response_chain.ainvoke({"context": context_str, "query": keyword})
-            cleaned_tag = re.sub(r'\[+|\]+', '', result.strip())
+        pbar = tqdm(elements, desc="タグマッチング中")
+        import random
+        for element in pbar:
+            docs = self.retriever.invoke(element.replace('_', ' '))
+            context = [doc.page_content for doc in docs]
+            context.reverse() # 最後の要素が重視されがちなので、逆順にする
 
+            context_str = ", ".join(context)
+            tag_message = await self.tag_response_chain.ainvoke({"query": element, "context": context_str})
+            tag = tag_message.content if hasattr(tag_message, 'content') else str(tag_message)
+            
+            # Remove ** from the tag and remove square brackets
+            cleaned_tag = re.sub(r'\[+|\]+', '', tag.strip())
+            cleaned_tag = re.sub(r'\*+', '', cleaned_tag)
+            cleaned_tag = re.sub(r'^-+', '', cleaned_tag)
+            cleaned_tag = cleaned_tag.replace('_', ' ').split(':')[0].split(',')[0].strip()
+            
+            # pbar.write(f'{element} -> {tag} -> {cleaned_tag}')
 
-            # 追加ロジック：orcかつmaleの場合、'1boy'を補完
-            if 'orc' in keyword.lower() and 'male' in keyword.lower() and '1boy' not in cleaned_tag:
-                cleaned_tag = '1boy, ' + cleaned_tag
-            if '1boy' in cleaned_tag and 'solo' not in cleaned_tag:
-                cleaned_tag = 'solo, ' + cleaned_tag
             if cleaned_tag and cleaned_tag not in seen:
+                if 'style' in cleaned_tag:
+                    continue
                 refined_tags.append(cleaned_tag)
                 seen.add(cleaned_tag)
-        # 整形（重複除去など既存のclean_tags関数も利用可能）
+
         return clean_tags(refined_tags)
     
     async def generate_tag_candidates(self, prompt: str) -> list:
         """
         プロンプト（シーン説明）からタグ候補を生成する統合メソッド。
-        1. extract_keywordsでキーワード（タグ候補）を抽出
+        1. extract_elementsでキーワード（タグ候補）を抽出
         2. retrieve_tagsで各キーワードに対し補正を実施
         3. 最終的なタグ候補リストを返す
         """
-        keywords = await self.extract_keywords(prompt)
-        print('keywords', keywords)
-        candidates = await self.retrieve_tags(keywords)
-        print('candidates', candidates)
+        prompt_elements = await self.extract_elements(prompt)
+        candidates = await self.retrieve_tags(prompt_elements)
         return candidates

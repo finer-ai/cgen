@@ -1,29 +1,43 @@
 import asyncio
 from services.rag_service import RAGService
 from services.dart_service import DartService
-async def main():
-    print()
-    # RAGサービス
-    rag_service = RAGService()
+from utils.llm_utils import load_llm
 
-    prompt_ja = "ベッドの上で横向きに寝そべっている金髪の女の子"
-    # prompt_en = "A girl with blonde hair lying on her bed, facing sideways"
-    keywords = await rag_service.extract_keywords(prompt_ja)
-    print(keywords, "\n")
+def get_test_tag_candidates():
+    tag_candidates = "1girl, solo, jumping, school uniform, jacket, posture, action figure, outdoors, day, long hair, brown hair, green eyes, smile, happy, energy, 1boy, cutesexyrobutts, kawaii"
+    tag_candidates = tag_candidates.split(', ')
+    return tag_candidates
+    
+def get_test_final_tags():
+    final_tags = "original, 1girl, solo focus, jumping, outdoors, action, pose, brown hair, solo, 1boy, energy, facing away, fantasy, from behind, glowing, holding, holding sword, holding weapon, japanese clothes, katana, kimono, long hair, long sleeves, monster, obi, ponytail, red kimono, sandals, sash, sword, tabi, weapon, white legwear, wide sleeves, zouri"
+    final_tags = final_tags.split(', ')
+    return final_tags
 
-    # キーワードから関連文脈を取得
-    # keywords = ["""A portrait of an artist drawn by the artist themselves, this also includes an [[original]] character/[[virtual youtuber]] representing them."""]
-    # tags = await rag_service.retrieve_tags([prompt_en])
-    # print([tag.split('\n') for tag in tags])
+async def test_service():
+    llm = load_llm(use_local_llm=False)
+    
+    rag_service = RAGService(llm)
+    # prompt = "「女の子がジャンプしているポーズ」を描いてください。セーラー服ではなくブレザーを着ている。ちょっとエッチな感じで。"
+    prompt = "図書館で本を読んでいる女の子。眼鏡をかけていて、真面目そうな見た目なんですが、なんとなく大人っぽい魅力があふれています。"
+    tag_candidates = await rag_service.generate_tag_candidates(prompt)
+    # tag_candidates = get_test_tag_candidates()
+    # print('##tag_candidates##\n', ', '.join(tag_candidates), "\n")
 
-    # Dartサービス
-    dart_service = DartService()
-    # some_tags = ["1girl", "solo", "bed", "ass", "sitting"]
-    # タグ候補を生成
-    final_tags = await dart_service.generate_final_tags(keywords)
-    print('final_tags_list', final_tags)
-    print(', '.join(final_tags))
-    print()
+    dart_service = DartService(llm)
+    final_tags = await dart_service.generate_final_tags(tag_candidates)
+    # final_tags = get_test_final_tags()
+    # print('##final_tags##\n', ', '.join(final_tags), "\n")
+
+    filtered_tags = await dart_service.filter_tags_by_context(
+        tags_str=", ".join(final_tags),
+        context_prompt=prompt
+    )
+    print('##filtered_tags##\n', ', '.join(filtered_tags))
+    # print('##deleted_tags##\n', ', '.join(set(final_tags) - set(filtered_tags)), "\n")
+    # print('final_tagsに含まれているが、filtered_tagsに含まれていないタグは以下です。')
+    # for tag in set(filtered_tags):
+    #     if tag not in final_tags:
+    #         print(tag)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(test_service())
