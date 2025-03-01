@@ -10,13 +10,13 @@ from langchain_core.output_parsers import StrOutputParser
 from core.config import settings
 from core.errors import RAGError
 from utils.tag_utils import clean_tags
-
+from utils.llm_utils import load_llm
 from tqdm import tqdm
 
 class RAGService:
     """RAGによるタグ候補抽出サービス"""
 
-    def __init__(self, llm):
+    def __init__(self, use_local_llm=False):
         # GPUが利用可能な場合はGPUを使用
         device = "cuda" if torch.cuda.is_available() else "cpu"
         
@@ -40,7 +40,7 @@ class RAGService:
         self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 5})
         
         # LLMの設定
-        self.llm = llm
+        self.llm = load_llm(use_local_llm=use_local_llm)
         
         # キーワード（＝タグ候補）抽出用LLMChain（シーン説明からカンマ区切りのタグ候補を生成）
         self.num_candidates = 20

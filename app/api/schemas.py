@@ -2,29 +2,33 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 
 class PromptRequest(BaseModel):
-    """プロンプトリクエスト"""
-    prompt: str = Field(..., description="生成したい画像の説明（日本語）")
+    """プロンプトリクエストのスキーマ"""
+    prompt: str = Field(..., description="生成のためのプロンプト")
+    negative_prompt: Optional[str] = Field(default="", description="ネガティブプロンプト")
+    steps: Optional[int] = Field(default=30, description="生成ステップ数")
+    cfg_scale: Optional[float] = Field(default=7.0, description="CFGスケール")
+    width: Optional[int] = Field(default=512, description="生成画像の幅")
+    height: Optional[int] = Field(default=768, description="生成画像の高さ")
+    num_images: Optional[int] = Field(default=1, description="生成する画像の数")
 
 class TagsResponse(BaseModel):
-    """タグ生成レスポンス"""
-    tags: List[str] = Field(..., description="生成されたDanbooruタグのリスト")
+    """タグ生成レスポンスのスキーマ"""
+    tags: List[str] = Field(..., description="生成されたタグのリスト")
 
 class ImageGenerationRequest(BaseModel):
-    """画像生成リクエスト"""
-    tags: List[str] = Field(..., description="使用するDanbooruタグのリスト")
-    steps: Optional[int] = Field(None, description="生成ステップ数")
-    cfg_scale: Optional[float] = Field(None, description="CFGスケール")
-    width: Optional[int] = Field(None, description="画像幅")
-    height: Optional[int] = Field(None, description="画像高さ")
-    negative_prompt: Optional[str] = Field(None, description="ネガティブプロンプト")
+    """画像生成リクエストのスキーマ"""
+    tags: List[str] = Field(..., description="生成に使用するタグのリスト")
+    steps: Optional[int] = Field(default=30, description="生成ステップ数")
+    cfg_scale: Optional[float] = Field(default=7.0, description="CFGスケール")
+    width: Optional[int] = Field(default=512, description="生成画像の幅")
+    height: Optional[int] = Field(default=768, description="生成画像の高さ")
+    negative_prompt: Optional[str] = Field(default="", description="ネガティブプロンプト")
 
 class ImageResponse(BaseModel):
-    """画像生成レスポンス"""
-    image_base64: str = Field(..., description="Base64エンコードされた画像")
-    prompt: str = Field(..., description="使用されたプロンプト")
-    parameters: Dict[str, Any] = Field(..., description="生成パラメータ")
+    """画像生成レスポンスのスキーマ"""
+    images: List[str] = Field(..., description="生成された画像のBase64エンコードされたリスト")
+    generated_tags: List[str] = Field(..., description="生成に使用されたタグのリスト")
 
 class ErrorResponse(BaseModel):
-    """エラーレスポンス"""
-    error: str = Field(..., description="エラーメッセージ")
-    detail: Optional[str] = Field(None, description="詳細情報") 
+    """エラーレスポンスのスキーマ"""
+    detail: str = Field(..., description="エラーの詳細メッセージ") 

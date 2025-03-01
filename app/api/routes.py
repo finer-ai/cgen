@@ -10,15 +10,12 @@ from services.rag_service import RAGService
 from services.dart_service import DartService
 from services.image_service import ImageService
 from core.errors import RAGError, DartError, ImageGenerationError
-from utils.llm_utils import load_llm
 router = APIRouter()
 
-llm = load_llm(use_local_llm=False)
-
 # サービスのシングルトンインスタンス
-rag_service = RAGService(llm)
-dart_service = DartService(llm)
-# image_service = ImageService()
+rag_service = RAGService()
+dart_service = DartService()
+image_service = ImageService()
 
 @router.post("/generate-tags", response_model=TagsResponse)
 async def generate_tags(request: PromptRequest) -> Dict[str, Any]:
@@ -92,11 +89,22 @@ async def generate_from_prompt(request: PromptRequest) -> Dict[str, Any]:
         # Dartでタグを補完
         final_tags = await dart_service.generate_final_tags(tag_candidates)
         
-        # 画像生成
-        result = await image_service.generate_image(tags=final_tags)
+        # コンテキストに基づいてタグをフィルタリング
+        filtered_tags = await dart_service.filter_tags_by_context(
+            tags_str=", ".join(final_tags),
+            context_prompt=request.prompt
+        )
         
-        # タグ情報を結果に追加
-        result["tags"] = final_tags
+        # 画像生成
+        result = await image_service.generate_image(
+            tags=filtered_tags,
+            steps=request.steps,
+            cfg_scale=request.cfg_scale,
+            width=request.width,
+            height=request.height,
+            negative_prompt=request.negative_prompt,
+            num_images=request.num_images
+        )
         
         return result
     

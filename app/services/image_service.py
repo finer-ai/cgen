@@ -49,6 +49,7 @@ class ImageService:
         width: Optional[int] = None,
         height: Optional[int] = None,
         negative_prompt: Optional[str] = None,
+        num_images: Optional[int] = None,
     ) -> Dict[str, Any]:
         """タグから画像を生成"""
         try:
@@ -62,28 +63,31 @@ class ImageService:
             # タグをプロンプトに変換
             prompt = ", ".join(tags)
             
-            # 画像生成
-            with torch.autocast("cuda"):
-                result = self.pipe(
-                    prompt=prompt,
-                    negative_prompt=negative_prompt,
-                    num_inference_steps=steps,
-                    guidance_scale=cfg_scale,
-                    width=width,
-                    height=height,
-                )
+            image_base64_list = []
+            for i in range(num_images):
+                # 画像生成
+                with torch.autocast("cuda"):
+                    result = self.pipe(
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        num_inference_steps=steps,
+                        guidance_scale=cfg_scale,
+                        width=width,
+                        height=height,
+                    )
             
-            # 画像の取得
-            image = result.images[0]
-            
-            # Base64エンコード
-            buffered = io.BytesIO()
-            image.save(buffered, format="PNG")
-            image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+                # 画像の取得
+                image = result.images[0]
+                
+                # Base64エンコード
+                buffered = io.BytesIO()
+                image.save(buffered, format="PNG")
+                image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+                image_base64_list.append(image_base64)
             
             # 結果を返却
             return {
-                "image_base64": image_base64,
+                "image_base64_list": image_base64_list,
                 "prompt": prompt,
                 "parameters": {
                     "steps": steps,

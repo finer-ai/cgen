@@ -24,8 +24,8 @@ WORKDIR /app
 # 依存関係ファイルのコピーとインストール
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
-
 RUN pip install torch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 --index-url https://download.pytorch.org/whl/cu121
+RUN pip install runpod
 
 # アプリケーションファイルのコピー
 COPY ./app /app/
@@ -34,4 +34,5 @@ COPY ./app /app/
 EXPOSE 8000
 
 # 起動コマンド
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 
+CMD ["python", "-u", "handler.py"]
+# CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 

@@ -7,11 +7,12 @@ from langchain_core.output_parsers import StrOutputParser
 from core.config import settings
 from core.errors import DartError
 from utils.tag_utils import clean_tags, format_dart_output
+from utils.llm_utils import load_llm
 
 class DartService:
     """Dartによるタグ補完サービス"""
     
-    def __init__(self, llm):
+    def __init__(self, use_local_llm=False):
         """初期化
         
         Args:
@@ -30,7 +31,7 @@ class DartService:
             device_map="auto"
         )
         
-        self.llm = llm
+        self.llm = load_llm(use_local_llm=use_local_llm)
         
         # タグフィルタリング用のプロンプトテンプレート
         filter_template = """
@@ -63,11 +64,20 @@ Important rules for weight application:
    - Do not add weights based on assumptions or general knowledge
    - Only add weights when there is clear evidence in the context
 
-2. Direct modifiers - Apply to ALL related tags when present:
+2. POSE-RELATED weights (:1.3):
+   - Apply :1.3 to ALL pose-contributing tags when the context specifically requests a pose
+   - This includes:
+     a) Direct pose tags: standing, sitting, jumping, running, lying, kneeling, etc.
+     b) Body part position tags: arms_up, crossed_legs, spread_arms, hands_in_pockets, etc.
+     c) Action-implying tags: looking_back, hair_flip, stretching, twirling, etc.
+     d) Pose-affecting clothing tags: skirt_flip, wind_lift, floating_hair, etc.
+     e) Dynamic elements: wind, motion_blur, action_lines, etc.
+
+3. Direct modifiers - Apply to ALL related tags when present:
    - Low intensity (:0.3): ちょっと (a little), 少し (slightly), やや (somewhat), 微妙に (subtly), 控えめに (moderately)
    - High intensity (:1.7): すごく (very), とても (extremely), 非常に (highly), かなり (considerably), めちゃくちゃ (incredibly)
 
-3. Mood/Atmosphere modifiers - Apply ONLY when explicitly mentioned or strongly implied:
+4. Mood/Atmosphere modifiers - Apply ONLY when explicitly mentioned or strongly implied:
    When the context explicitly mentions these moods, apply weights to ALL related tags:
    
    a) Suggestive/Erotic mood:
@@ -84,36 +94,37 @@ Important rules for weight application:
       - "ちょっとエッチ" = (sexually_suggestive:0.3)
       - "すごくエッチ" = (sexually_suggestive:1.7)
 
-4. Context Analysis - Strict Rules:
+5. Context Analysis - Strict Rules:
    - Only consider explicit modifiers or very strong contextual implications
    - Do not add weights based on subtle implications or assumptions
    - When in doubt, leave the tag without weights
+   - Pose weights (:1.3) can stack with mood/modifier weights
 
 # Examples ####
-Example 1 (With modifiers):
-Context: ちょっとエッチな感じで女の子がジャンプしているポーズを描いてください。
-Tags: original, 1girl, jumping, solo, sexually_suggestive, skirt, smile, thighhighs
-Output: original, 1girl, jumping, solo, (sexually_suggestive:0.3), (skirt:0.3), smile, (thighhighs:0.3)
+Example 1 (Pose with modifiers):
+Context: ちょっとエッチな感じで女の子がジャンプしているポーズを描いてください。スカートがふわっとなっています。
+Tags: original, 1girl, jumping, solo, sexually_suggestive, skirt, smile, thighhighs, wind_lift
+Output: original, 1girl, (jumping:1.3), solo, (sexually_suggestive:0.3), (skirt:0.3), smile, (thighhighs:0.3), (wind_lift:1.3)
 
-Example 2 (No modifiers):
-Context: 女の子がジャンプしているポーズを描いてください。制服を着ています。
-Tags: original, 1girl, jumping, solo, school_uniform, skirt, smile
-Output: original, 1girl, jumping, solo, school_uniform, skirt, smile
+Example 2 (Simple pose):
+Context: 女の子が両手を広げてバランスを取っているポーズを描いてください。
+Tags: original, 1girl, standing, spread_arms, balancing, skirt
+Output: original, 1girl, (standing:1.3), (spread_arms:1.3), (balancing:1.3), skirt
 
-Example 3 (Mixed modifiers):
-Context: すごく可愛らしい女の子が、ちょっとセクシーな制服を着て走っています。
-Tags: original, 1girl, running, school_uniform, cute, skirt, thighhighs, smile
-Output: original, 1girl, running, (school_uniform:0.3), (cute:1.7), (skirt:0.3), (thighhighs:0.3), (smile:1.7)
+Example 3 (Mixed modifiers with pose):
+Context: すごく可愛らしい女の子が、ちょっとセクシーな感じで後ろを振り返るポーズ。
+Tags: original, 1girl, looking_back, turning, cute, sexually_suggestive, smile
+Output: original, 1girl, (looking_back:1.3), (turning:1.3), (cute:1.7), (sexually_suggestive:0.3), (smile:1.7)
 
-Example 4 (Implicit but strong):
-Context: 制服がびしょ濡れで、体にぴったりと張り付いている女の子が立っています。
-Tags: original, 1girl, standing, school_uniform, wet_clothes, transparent, smile
-Output: original, 1girl, standing, school_uniform, (wet_clothes:0.3), (transparent:0.3), smile
+Example 4 (Dynamic pose):
+Context: 風で制服がなびいている中、ジャンプしている女の子を描いてください。
+Tags: original, 1girl, jumping, school_uniform, wind, floating_hair, skirt_flip
+Output: original, 1girl, (jumping:1.3), school_uniform, (wind:1.3), (floating_hair:1.3), (skirt_flip:1.3)
 
 Example 5 (No clear modifiers):
 Context: 放課後の教室で本を読んでいる女の子を描いてください。
 Tags: original, 1girl, classroom, reading, book, school_uniform, afternoon
-Output: original, 1girl, classroom, reading, book, school_uniform, afternoon
+Output: original, 1girl, classroom, (reading:1.3), book, school_uniform, afternoon
 
 Context: {context_prompt}
 
