@@ -10,25 +10,34 @@ from services.rag_service import RAGService
 from services.dart_service import DartService
 from services.image_service import ImageService
 from core.errors import RAGError, DartError, ImageGenerationError
-
+from utils.llm_utils import load_llm
 router = APIRouter()
 
+llm = load_llm(use_local_llm=False)
+
 # サービスのシングルトンインスタンス
-rag_service = RAGService()
-dart_service = DartService()
-image_service = ImageService()
+rag_service = RAGService(llm)
+dart_service = DartService(llm)
+# image_service = ImageService()
 
 @router.post("/generate-tags", response_model=TagsResponse)
 async def generate_tags(request: PromptRequest) -> Dict[str, Any]:
     """ユーザープロンプトからDanbooruタグを生成"""
     try:
+        prompt = request.prompt
+
         # RAGでタグ候補を取得
-        tag_candidates = await rag_service.generate_tag_candidates(request.prompt)
+        tag_candidates = await rag_service.generate_tag_candidates(prompt)
         
         # Dartでタグを補完
         final_tags = await dart_service.generate_final_tags(tag_candidates)
         
-        return {"tags": final_tags}
+        # コンテキストに基づいてタグをフィルタリング
+        filtered_tags = await dart_service.filter_tags_by_context(
+            tags_str=", ".join(final_tags),
+            context_prompt=prompt
+        )
+        return {"tags": filtered_tags}
     
     except RAGError as e:
         raise HTTPException(

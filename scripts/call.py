@@ -62,7 +62,9 @@ def main():
     # タグ生成のテスト
     print("2. タグ生成のテスト")
     data = {
-        "prompt": "ベッドの上で横向きに寝そべっている金髪の女の子"
+        # "prompt": "図書館で本を読んでいる女の子。眼鏡をかけていて、真面目そうな見た目なんですが、なんとなく大人っぽい魅力があふれています。"
+        "prompt": "「制服の女の子がジャンプしているポーズ」を描いてください。セーラー服ではなくブレザーを着ている。ちょっとエッチな感じで。"
+        # "prompt": "ベッドの上で横向きに寝そべっている金髪の女の子"
     }
     response = call_api('/api/generate-tags', method='POST', data=data)
     print("POST response:", json.dumps(response, indent=2, ensure_ascii=False))

@@ -13,8 +13,6 @@ services:
       - ./models:/app/models
       # test
       - ./scripts:/app/scripts
-      # 環境変数
-      - ./.env:/app/.env:ro
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
     deploy:
