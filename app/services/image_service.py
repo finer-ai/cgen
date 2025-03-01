@@ -19,8 +19,8 @@ class ImageService:
             # Stable Diffusion XL モデルのロード
             self.pipe = StableDiffusionXLPipeline.from_single_file(
                 settings.SD_MODEL_PATH,
-                torch_dtype=torch.float16,
                 use_safetensors=True,
+                torch_dtype=torch.float16,
                 variant="fp16"
             )
             

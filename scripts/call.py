@@ -66,6 +66,8 @@ def main():
     }
     response = call_api('/api/generate-tags', method='POST', data=data)
     print("POST response:", json.dumps(response, indent=2, ensure_ascii=False))
+    tags = response.get("tags", [])
+    print(", ".join(tags))
     print()
     
     # if response:

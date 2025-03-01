@@ -8,9 +8,11 @@ services:
       - "8000:8000"
     volumes:
       # アプリケーションコード
-      - ./app:/app/app
+      - ./app:/app
       # モデルとデータのディレクトリ
       - ./models:/app/models
+      # test
+      - ./scripts:/app/scripts
       # 環境変数
       - ./.env:/app/.env:ro
     environment:

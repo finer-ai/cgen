@@ -42,6 +42,7 @@ class DartService:
         try:
             # 入力フォーマット作成
             dart_input = self._format_input_for_dart(tag_candidates)
+            print(dart_input)
             
             # トークン化
             inputs = self.tokenizer(
@@ -56,13 +57,19 @@ class DartService:
             with torch.no_grad():
                 outputs = self.model.generate(
                     inputs.input_ids,
-                    attention_mask=inputs.attention_mask,
-                    max_new_tokens=256,
+                    # attention_mask=inputs.attention_mask,
+                    # max_new_tokens=256,
+                    # do_sample=True,
+                    # temperature=0.5,
+                    # top_p=0.9,
+                    # repetition_penalty=1.2,
+                    # pad_token_id=self.tokenizer.eos_token_id
                     do_sample=True,
-                    temperature=0.5,
-                    top_p=0.9,
-                    repetition_penalty=1.2,
-                    pad_token_id=self.tokenizer.eos_token_id
+                    temperature=1.0,
+                    top_p=1.0,
+                    top_k=100,
+                    max_new_tokens=128,
+                    num_beams=1,
                 )
             
             # デコード

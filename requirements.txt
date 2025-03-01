@@ -8,26 +8,26 @@ pydantic-settings==2.8.1
 langchain==0.3.19
 langchain-community==0.3.18
 langchain_openai==0.3.7
+langchain_huggingface==0.1.2
 faiss-cpu==1.7.4
 openai==1.65.1
 
 # 画像生成関連
-diffusers==0.26.3
-transformers==4.36.1
-accelerate==0.22.0
-xformers==0.0.21
-safetensors==0.3.3
+diffusers==0.32.2
+transformers==4.43.2
+accelerate==1.4.0
+xformers==0.0.28
+safetensors==0.5.3
 pillow==10.0.0
 
 # ユーティリティ
 python-dotenv==1.0.0
 httpx==0.24.1
-torch==2.0.1
 numpy==1.26.4
-huggingface-hub==0.25.2
+huggingface-hub==0.29.1
 
 # RAGデータセット処理用
-sentence-transformers==2.2.2
+sentence-transformers==3.4.1
 pandas==2.0.3
 # faiss-gpu==1.7.2
 datasets==2.14.5

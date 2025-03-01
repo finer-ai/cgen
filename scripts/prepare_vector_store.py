@@ -28,10 +28,11 @@ def create_vector_store(df):
     documents = []
     print("ドキュメント作成中...")
     for _, row in df.iterrows():
-        tag = row['title']
+        tag = row['tag']
         text = row['body']
         other_names = row['other_names']
-        doc = f"{tag}: {text} (Other names: {', '.join(other_names) if isinstance(other_names, list) else other_names})"
+        doc = f"{tag}"
+        # doc = f"{tag}: {text} (Other names: {', '.join(other_names) if isinstance(other_names, list) else other_names})"
         documents.append(doc)
     
     # FAISSベクトルストア作成
