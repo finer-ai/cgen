@@ -97,7 +97,7 @@ Output:
         """
         result = await self.rich_description_chain.ainvoke({"scene_description": query})
         # カンマで分割し、前後の空白を除去
-        keywords = [word.strip() for word in result['text'].split(",") if word.strip()]
+        keywords = [word.strip() for word in result.split(",") if word.strip()]
         return keywords
 
     async def retrieve_tags(self, keywords: list) -> list:
