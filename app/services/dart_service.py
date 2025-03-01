@@ -38,17 +38,9 @@ class DartService:
         try:
             # 入力フォーマット作成
             dart_input = self._format_input_for_dart(tag_candidates)
-            print(dart_input)
             
             # トークン化
             inputs = self.tokenizer(dart_input, return_tensors="pt").input_ids
-            # inputs = self.tokenizer(
-            #     dart_input,
-            #     return_tensors="pt",
-            #     add_special_tokens=True,
-            #     padding=True,
-            #     return_token_type_ids=False  # token_type_idsを無効化
-            # ).to(self.model.device)
             
             # 補完生成
             with torch.no_grad():
