@@ -119,11 +119,10 @@ def test_all_apis():
         "width": 512,
         "height": 512,
         "negative_prompt": "lowres, bad anatomy, bad hands, cropped, worst quality",
-        "num_images": 2
+        "num_images": 1
     }
     response = call_api('/api/generate-from-prompt', method='POST', data=data)
-    for i in range(response["num_images"]):
-        image_base64 = response["image_base64_list"][i]
+    for i, image_base64 in enumerate(response.get("images", [])):
         with open(f"output_{i}.png", "wb") as f:
             f.write(base64.b64decode(image_base64))
             print(f"画像をoutput_{i}.pngに保存しました")

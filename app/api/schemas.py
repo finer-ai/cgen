@@ -28,6 +28,7 @@ class ImageResponse(BaseModel):
     """画像生成レスポンスのスキーマ"""
     images: List[str] = Field(..., description="生成された画像のBase64エンコードされたリスト")
     generated_tags: List[str] = Field(..., description="生成に使用されたタグのリスト")
+    parameters: Dict[str, Any] = Field(..., description="生成パラメータ")
 
 class ErrorResponse(BaseModel):
     """エラーレスポンスのスキーマ"""

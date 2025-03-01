@@ -106,7 +106,19 @@ async def generate_from_prompt(request: PromptRequest) -> Dict[str, Any]:
             num_images=request.num_images
         )
         
-        return result
+        # レスポンスの構造をImageResponseスキーマに合わせる
+        return {
+            "images": result["images"],
+            "generated_tags": filtered_tags,
+            "parameters": {
+                "steps": request.steps,
+                "cfg_scale": request.cfg_scale,
+                "width": request.width,
+                "height": request.height,
+                "negative_prompt": request.negative_prompt,
+                "num_images": request.num_images
+            }
+        }
     
     except RAGError as e:
         raise HTTPException(

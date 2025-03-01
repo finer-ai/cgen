@@ -1,16 +1,16 @@
 import runpod
 import base64
 from typing import Dict, Any
-from services.prompt_service import PromptService
+from services.rag_service import RAGService
 from services.dart_service import DartService
 from services.image_service import ImageService
-from core.config import settings
+from core.errors import RAGError, DartError, ImageGenerationError
 from utils.llm_utils import load_llm
 
 # サービスのインスタンス化
 llm = load_llm()
+rag_service = RAGService()
 dart_service = DartService(llm)
-prompt_service = PromptService(llm)
 image_service = ImageService()
 
 async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
@@ -20,6 +20,10 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         input_data = event["input"]
         prompt = input_data.get("prompt")
         negative_prompt = input_data.get("negative_prompt", "")
+        steps = input_data.get("steps", 30)
+        cfg_scale = input_data.get("cfg_scale", 7.0)
+        width = input_data.get("width", 512)
+        height = input_data.get("height", 768)
         num_images = input_data.get("num_images", 1)
         
         # バリデーション
@@ -28,35 +32,44 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
                 "error": "No prompt provided"
             }
 
-        # プロンプトからタグを生成
         try:
-            # タグの生成と重み付け
-            tags = await prompt_service.generate_tags(prompt)
-            weighted_tags = await dart_service.filter_tags_by_context(
-                tags_str=", ".join(tags),
+            # RAGでタグ候補を取得
+            tag_candidates = await rag_service.generate_tag_candidates(prompt)
+            
+            # Dartでタグを補完
+            final_tags = await dart_service.generate_final_tags(tag_candidates)
+            
+            # コンテキストに基づいてタグをフィルタリング
+            filtered_tags = await dart_service.filter_tags_by_context(
+                tags_str=", ".join(final_tags),
                 context_prompt=prompt
             )
             
             # 画像生成
-            images = await image_service.generate_images(
-                tags=weighted_tags,
+            result = await image_service.generate_image(
+                tags=filtered_tags,
+                steps=steps,
+                cfg_scale=cfg_scale,
+                width=width,
+                height=height,
                 negative_prompt=negative_prompt,
                 num_images=num_images
             )
             
-            # 画像をBase64エンコード
-            encoded_images = []
-            for img in images:
-                # バイト列をBase64エンコード
-                img_base64 = base64.b64encode(img).decode('utf-8')
-                encoded_images.append(img_base64)
-            
             return {
-                "generated_tags": weighted_tags,
-                "images": encoded_images
+                "images": result["images"],
+                "generated_tags": filtered_tags,
+                "parameters": {
+                    "steps": steps,
+                    "cfg_scale": cfg_scale,
+                    "width": width,
+                    "height": height,
+                    "negative_prompt": negative_prompt,
+                    "num_images": num_images
+                }
             }
             
-        except Exception as e:
+        except (RAGError, DartError, ImageGenerationError) as e:
             return {"error": f"Generation failed: {str(e)}"}
 
     except Exception as e:

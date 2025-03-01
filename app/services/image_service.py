@@ -54,16 +54,16 @@ class ImageService:
         """タグから画像を生成"""
         try:
             # パラメータのデフォルト値設定
-            steps = steps or settings.DEFAULT_STEPS
-            cfg_scale = cfg_scale or settings.DEFAULT_CFG_SCALE
-            width = width or settings.DEFAULT_WIDTH
-            height = height or settings.DEFAULT_HEIGHT
+            steps = steps or 20
+            cfg_scale = cfg_scale or 7.0
+            width = width or 512
+            height = height or 768
             negative_prompt = negative_prompt or "lowres, bad anatomy, bad hands, cropped, worst quality"
             
             # タグをプロンプトに変換
             prompt = ", ".join(tags)
             
-            image_base64_list = []
+            images = []
             for i in range(num_images):
                 # 画像生成
                 with torch.autocast("cuda"):
@@ -83,17 +83,19 @@ class ImageService:
                 buffered = io.BytesIO()
                 image.save(buffered, format="PNG")
                 image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
-                image_base64_list.append(image_base64)
-            
+                images.append(image_base64)
             # 結果を返却
             return {
-                "image_base64_list": image_base64_list,
-                "prompt": prompt,
+                "images": images,
+                "generated_tags": tags,
                 "parameters": {
+                    "prompt": prompt,
+                    "negative_prompt": negative_prompt,
                     "steps": steps,
                     "cfg_scale": cfg_scale,
                     "width": width,
                     "height": height,
+                    "num_images": num_images
                 }
             }
         

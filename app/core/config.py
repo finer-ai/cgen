@@ -9,23 +9,17 @@ class Settings(BaseSettings):
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
     
     # モデルパス設定
-    DART_MODEL_PATH: str = os.getenv("DART_MODEL_PATH", "./models/dart")
+    DART_MODEL_PATH: str = os.getenv("DART_MODEL_PATH", "/app/models/dart")
     DART_REPO_ID: str = os.getenv("DART_REPO_ID", "p1atdev/dart-v2-moe-sft")
-    SD_MODEL_PATH: str = os.getenv("SD_MODEL_PATH", "./models/animagine-xl-4.0.safetensors")
-    SD_REPO_ID: str = os.getenv("SD_REPO_ID", "cagliostrolab/animagine-xl-4.0")
-    LLAMA_MODEL_PATH: str = os.getenv("LLAMA_MODEL_PATH", "./models/llama3.1")
+    SD_MODEL_PATH: str = os.getenv("SD_MODEL_PATH", "/app/models/animagine-xl-4.0.safetensors")
+    SD_REPO_ID: str = os.getenv("SD_REPO_ID", "Linaqruf/animagine-xl-4.0")
+    LLAMA_MODEL_PATH: str = os.getenv("LLAMA_MODEL_PATH", "/app/models/llama3.1")
     LLAMA_REPO_ID: str = os.getenv("LLAMA_REPO_ID", "meta-llama/Llama-3.1-8B-Instruct")
     MISTRAL_MODEL_PATH: str = os.getenv("MISTRAL_MODEL_PATH", "./models/mistral")
     MISTRAL_REPO_ID: str = os.getenv("MISTRAL_REPO_ID", "mistralai/Mistral-7B-v0.1")
 
     # RAG設定
-    VECTOR_DB_PATH: str = os.getenv("VECTOR_DB_PATH", "./data/faiss")
-    
-    # 画像生成デフォルト設定
-    DEFAULT_STEPS: int = int(os.getenv("DEFAULT_STEPS", "20"))
-    DEFAULT_CFG_SCALE: float = float(os.getenv("DEFAULT_CFG_SCALE", "7.0"))
-    DEFAULT_WIDTH: int = int(os.getenv("DEFAULT_WIDTH", "512"))
-    DEFAULT_HEIGHT: int = int(os.getenv("DEFAULT_HEIGHT", "768"))
+    VECTOR_DB_PATH: str = os.getenv("VECTOR_DB_PATH", "/app/data/faiss")
     
     # APIキー設定（オプション）
     API_KEY: Optional[str] = os.getenv("API_KEY")
