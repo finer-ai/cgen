@@ -36,17 +36,10 @@ def clean_tags(tags: List[str]) -> List[str]:
 def format_dart_output(generated_text: str) -> List[str]:
     """Dartの出力をタグリストにパース"""
     # 出力からタグ部分を抽出
-    match = re.search(r"<general>(.*?)</general>", generated_text)
-    if match:
-        tags_text = match.group(1)
-        # カンマまたはスペースで区切られたタグを分割
-        # raw_tags = re.split(r",|\s+", tags_text)
-        print("tags_text", tags_text)
-        raw_tags = tags_text.split(',')
-        print("raw_tags", raw_tags)
-        # 空のタグを除去
-        tags = [tag.strip() for tag in raw_tags if tag.strip()]
-        return tags
-    else:
-        # タグが見つからない場合は空リストを返す
-        return [] 
+    tags_text = generated_text
+    # カンマまたはスペースで区切られたタグを分割
+    # raw_tags = re.split(r",|\s+", tags_text)
+    raw_tags = tags_text.split(',')
+    # 空のタグを除去
+    tags = [tag.strip() for tag in raw_tags if tag.strip()]
+    return tags
