@@ -93,4 +93,26 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         return {"error": f"Unexpected error: {str(e)}"}
 
 if __name__ == "__main__":
-    runpod.serverless.start({"handler": handler}) 
+    # runpod.serverless.start({"handler": handler})
+
+    test_data = {
+        "input": {
+            "prompt": "prompt:anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)",
+            "negative_prompt": "(wings:1.6), (clothes:1.4), (garment:1.4), (lighting:1.4), (gray:1.4), (missing limb:1.4), (extra line:1.4), (extra limb:1.4), (extra arm:1.4), (extra legs:1.4), (hair:1.4), (bangs:1.4), (fringe:1.4), (forelock:1.4), (front hair:1.4), (fill:1.4), (ink pool:1.6)",
+        }
+    }
+    result = handler(test_data)
+    
+    # 画像を保存
+    for i, image in enumerate(result["images"]):
+        image_data = base64.b64decode(image)
+        with open(f"test_image_{i}.png", "wb") as f:
+            f.write(image_data)
+                
+    # ボディラインを保存
+    for i, image in enumerate(result["bodylines"]):
+        image_data = base64.b64decode(image)
+        with open(f"test_bodyline_{i}.png", "wb") as f:
+            f.write(image_data)
+            
+            
