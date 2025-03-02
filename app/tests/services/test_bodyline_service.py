@@ -113,4 +113,53 @@ class TestBodylineService:
             with open(output_path, 'wb') as f:
                 f.write(bio.getvalue())
         
-        print(f"Generated image saved to: {output_path}") 
+        print(f"Generated image saved to: {output_path}")
+
+@pytest.mark.integration
+@pytest.mark.slow
+class TestBodylineServiceIntegration:
+    """実際のモデルを使用する統合テスト"""
+    
+    @pytest.fixture
+    def bodyline_service(self):
+        """実際のモデルを使用するBodylineServiceインスタンス"""
+        return BodylineService()
+    
+    @pytest.mark.asyncio
+    async def test_generate_bodyline_with_real_model(self, bodyline_service):
+        """実際のモデルを使用してボディライン生成をテスト"""
+        # テスト用の入力画像を作成
+        test_image = Image.new('RGB', (512, 512), color='white')
+        
+        # 実際のモデルを使用して画像生成
+        result = await bodyline_service.generate_bodyline(
+            control_image=test_image,
+            prompt="1girl, simple background, white background, full body",
+            negative_prompt="nsfw, nude, bad anatomy, bad proportions",
+            num_inference_steps=5,  # テスト用に少ない推論ステップ数
+            guidance_scale=7.0
+        )
+        
+        # 結果の構造を確認
+        assert "image" in result
+        assert "parameters" in result
+        assert isinstance(result["image"], str)
+        
+        # 生成された画像を保存
+        image_bytes = base64.b64decode(result["image"])
+        test_output_dir = "tests/output/integration"
+        os.makedirs(test_output_dir, exist_ok=True)
+        output_path = os.path.join(test_output_dir, "test_generated_bodyline_real.png")
+        
+        # BytesIOを使用して画像を保存
+        image = Image.open(io.BytesIO(image_bytes))
+        with io.BytesIO() as bio:
+            image.save(bio, format='PNG')
+            with open(output_path, 'wb') as f:
+                f.write(bio.getvalue())
+        
+        print(f"Real model generated image saved to: {output_path}")
+        
+        # 画像のサイズと形式を確認
+        assert image.size == (512, 512)
+        assert image.mode in ['RGB', 'RGBA'] 
