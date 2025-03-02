@@ -51,13 +51,20 @@ class TestBodylineService:
     @pytest.mark.asyncio
     async def test_init(self, mock_base_pipeline, mock_controlnet, mock_pipeline):
         """初期化のテスト"""
-        with patch('core.config.settings.CONTROLNET_MODEL_PATHS', ['model1.pth', 'model2.pth']):
+        test_configs = [
+            {"path": "model1.pth", "conditioning_scale": 1.4},
+            {"path": "model2.pth", "conditioning_scale": 1.3}
+        ]
+        with patch('core.config.settings.CONTROLNET_CONFIGS', test_configs):
             service = BodylineService()
             
             # ControlNetモデルの初期化を確認
             assert len(service.controlnet_models) == 2
             for model in service.controlnet_models:
                 assert model == mock_controlnet
+            
+            # スケールの確認
+            assert service.controlnet_scales == [1.4, 1.3]
             
             # パイプラインの初期化を確認
             assert service.pipeline == mock_pipeline

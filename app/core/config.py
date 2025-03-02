@@ -35,7 +35,7 @@ class Settings(BaseSettings):
 
     # モデルパス
     SD15_MODEL_PATH: str = "models/LoRAMergeModel_animepose_outline_sotai.fp16.safetensors"
-    CONTROLNET_MODEL_PATHS: List[str] = [
+    CONTROLNET_CONFIGS: List[Dict[str, Any]] = [
         {
             "path": "models/Sotai_1K_ControlNet-epoch=989.ckpt",
             "conditioning_scale": 1.4
