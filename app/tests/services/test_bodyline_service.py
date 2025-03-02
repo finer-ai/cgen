@@ -168,7 +168,6 @@ class TestBodylineServiceIntegration:
         print(f"Input image dimensions: {test_image.size}")
 
         prompt = "anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)"
-        output_size = (786, 786)
         # 実際のモデルを使用して画像生成
         result = await bodyline_service.generate_bodyline(
             control_image=test_image,
@@ -176,7 +175,7 @@ class TestBodylineServiceIntegration:
             negative_prompt=f"(wings:1.6), (clothes, garment, lighting, gray, missing limb, extra line, extra limb, extra arm, extra legs, hair, bangs, fringe, forelock, front hair, fill:1.4), (ink pool:1.6)",
             num_inference_steps=20,  # テスト用に少ない推論ステップ数
             guidance_scale=8,
-            output_size=output_size
+            output_size=new_size
         )
         
         # 結果の構造を確認
