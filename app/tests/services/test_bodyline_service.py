@@ -43,8 +43,12 @@ def sample_image():
 def bodyline_service(mock_base_pipeline, mock_controlnet, mock_pipeline):
     with patch('services.bodyline_service.StableDiffusionControlNetPipeline') as pipeline_cls:
         pipeline_cls.return_value = mock_pipeline
-        # テスト用のモデルパスを設定
-        with patch('core.config.settings.CONTROLNET_MODEL_PATHS', ['model1.pth', 'model2.pth']):
+        # テスト用のモデル設定
+        test_configs = [
+            {"path": "model1.pth", "conditioning_scale": 1.4},
+            {"path": "model2.pth", "conditioning_scale": 1.3}
+        ]
+        with patch('core.config.settings.CONTROLNET_CONFIGS', test_configs):
             return BodylineService()
 
 class TestBodylineService:
@@ -151,11 +155,17 @@ class TestBodylineService:
         bodyline_service.pipeline.assert_called_once_with(
             prompt="test prompt",
             negative_prompt="test negative",
-            image=test_image,
+            image=[test_image] * 2,  # 2つのControlNetモデル用
             num_inference_steps=20,
             guidance_scale=7.0,
             width=output_size[0],
-            height=output_size[1]
+            height=output_size[1],
+            denoising_strength=0.13,
+            num_images_per_prompt=1,
+            guess_mode=[True] * 2,
+            controlnet_conditioning_scale=[1.4, 1.3],
+            guidance_start=[0.0] * 2,
+            guidance_end=[1.0] * 2
         )
 
         # 生成された画像を保存
