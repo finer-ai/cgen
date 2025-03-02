@@ -8,9 +8,8 @@ from core.errors import RAGError, DartError, ImageGenerationError
 from utils.llm_utils import load_llm
 
 # サービスのインスタンス化
-llm = load_llm()
 rag_service = RAGService()
-dart_service = DartService(llm)
+dart_service = DartService()
 image_service = ImageService()
 
 async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
@@ -33,21 +32,29 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
             }
 
         try:
-            # RAGでタグ候補を取得
-            tag_candidates = await rag_service.generate_tag_candidates(prompt)
-            
-            # Dartでタグを補完
-            final_tags = await dart_service.generate_final_tags(tag_candidates)
-            
-            # コンテキストに基づいてタグをフィルタリング
-            filtered_tags = await dart_service.filter_tags_by_context(
-                tags_str=", ".join(final_tags),
-                context_prompt=prompt
-            )
-            
+            if prompt.startswith("prompt:"):
+              joined_tags = [tag.strip() for tag in prompt.split("prompt:")[1].split(",")]
+            else:
+              # RAGでタグ候補を取得
+              tag_candidates = await rag_service.generate_tag_candidates(prompt)
+              print("tag_candidates", tag_candidates)
+              
+              # Dartでタグを補完
+              final_tags = await dart_service.generate_final_tags(tag_candidates)
+              print("final_tags", final_tags)
+
+              # コンテキストに基づいてタグをフィルタリング
+              filtered_tags = await dart_service.filter_tags_by_context(
+                  tags_str=", ".join(final_tags),
+                  context_prompt=prompt
+              )
+              quality_tags = ["masterpiece", "high score", "great score", "absurdres"]
+              joined_tags = filtered_tags + quality_tags
+            print("joined_tags", joined_tags)
+
             # 画像生成
             result = await image_service.generate_image(
-                tags=filtered_tags,
+                tags=joined_tags,
                 steps=steps,
                 cfg_scale=cfg_scale,
                 width=width,
@@ -56,8 +63,6 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
                 num_images=num_images
             )
             
-            quality_tags = ["masterpiece", "high score", "great score", "absurdres"]
-            joined_tags = ", ".join(filtered_tags + quality_tags)
 
             return {
                 "images": result["images"],
