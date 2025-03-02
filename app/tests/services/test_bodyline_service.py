@@ -130,14 +130,15 @@ class TestBodylineServiceIntegration:
         """実際のモデルを使用してボディライン生成をテスト"""
         # テスト用の入力画像を作成
         test_image = Image.new('RGB', (512, 512), color='white')
-        
+
+        prompt = "anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)"
         # 実際のモデルを使用して画像生成
         result = await bodyline_service.generate_bodyline(
             control_image=test_image,
-            prompt="1girl, simple background, white background, full body",
-            negative_prompt="nsfw, nude, bad anatomy, bad proportions",
-            num_inference_steps=5,  # テスト用に少ない推論ステップ数
-            guidance_scale=7.0
+            prompt=prompt,
+            negative_prompt=f"(wings:1.6), (clothes, garment, lighting, gray, missing limb, extra line, extra limb, extra arm, extra legs, hair, bangs, fringe, forelock, front hair, fill:1.4), (ink pool:1.6)",
+            num_inference_steps=20,  # テスト用に少ない推論ステップ数
+            guidance_scale=8
         )
         
         # 結果の構造を確認

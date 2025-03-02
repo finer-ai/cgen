@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     # モデルパス
     SD_MODEL_PATH: str = os.getenv("SD_MODEL_PATH", "/app/models/animagine-xl-4.0.safetensors")
     SD_REPO_ID: str = os.getenv("SD_REPO_ID", "Linaqruf/animagine-xl-4.0")
-    SD15_MODEL_PATH: str = "models/sd15_base.safetensors"
-    CONTROLNET_MODEL_PATH: str = "models/control_v11p_sd15_openpose.pth"
+    SD15_MODEL_PATH: str = "models/LoRAMergeModel_animepose_outline_sotai.fp16.safetensors"
+    CONTROLNET_MODEL_PATH: str = "models/Sotai_1K_ControlNet-epoch=989.ckpt"
     
     # RAG設定
     VECTOR_DB_PATH: str = os.getenv("VECTOR_DB_PATH", "/app/data/faiss")
