@@ -62,6 +62,15 @@ class BodylineService:
         binary_image = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 9, -8)
 
         return binary_image
+    
+    @staticmethod
+    def create_rgba_image(binary_image: np.ndarray, color: list) -> Image.Image:
+        rgba_image = np.zeros((binary_image.shape[0], binary_image.shape[1], 4), dtype=np.uint8)
+        rgba_image[:, :, 0] = color[0]
+        rgba_image[:, :, 1] = color[1]
+        rgba_image[:, :, 2] = color[2]
+        rgba_image[:, :, 3] = binary_image
+        return Image.fromarray(rgba_image, 'RGBA')
 
     @staticmethod
     def calculate_resize_dimensions(image: Image.Image, max_long_side: int) -> tuple[int, int]:
@@ -150,11 +159,14 @@ class BodylineService:
         image = output.images[0]
         
         # 画像を二値化
-        image = Image.fromarray(self.binarize_image(image))
+        binary_image = self.binarize_image(image)
+        
+        # 二値化した画像をRGBA画像に変換(赤色で表示)
+        rgba_image = self.create_rgba_image(binary_image, [255, 0, 0])
         
         # 生成された画像をBase64に変換
         buffered = io.BytesIO()
-        image.save(buffered, format="PNG")
+        rgba_image.save(buffered, format="PNG")
         image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
         
         return {
