@@ -163,8 +163,9 @@ class TestBodylineServiceIntegration:
         test_image = Image.open("tests/data/test_pose.jpg").convert('RGB')
         
         # 長辺786ピクセルにリサイズ
-        new_size = bodyline_service.calculate_resize_dimensions(test_image, 786)
-        test_image = test_image.resize(new_size, Image.Resampling.LANCZOS)
+        output_size = bodyline_service.calculate_resize_dimensions(test_image, 786)
+        input_size = bodyline_service.calculate_resize_dimensions(test_image, 512)
+        test_image = test_image.resize(input_size, Image.Resampling.LANCZOS)
         print(f"Input image dimensions: {test_image.size}")
 
         prompt = "anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)"
@@ -175,7 +176,7 @@ class TestBodylineServiceIntegration:
             negative_prompt=f"(wings:1.6), (clothes, garment, lighting, gray, missing limb, extra line, extra limb, extra arm, extra legs, hair, bangs, fringe, forelock, front hair, fill:1.4), (ink pool:1.6)",
             num_inference_steps=20,  # テスト用に少ない推論ステップ数
             guidance_scale=8,
-            output_size=new_size
+            output_size=output_size
         )
         
         # 結果の構造を確認
@@ -201,7 +202,7 @@ class TestBodylineServiceIntegration:
         
         # 画像のサイズと形式を確認（8ピクセル以内の誤差を許容）
         actual_width, actual_height = image.size
-        expected_width, expected_height = new_size
+        expected_width, expected_height = output_size
         assert abs(actual_width - expected_width) <= 8, f"Width difference is too large: {abs(actual_width - expected_width)}"
         assert abs(actual_height - expected_height) <= 8, f"Height difference is too large: {abs(actual_height - expected_height)}"
         assert image.mode in ['RGB', 'RGBA'] 
