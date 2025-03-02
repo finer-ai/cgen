@@ -14,13 +14,17 @@ class Settings(BaseSettings):
     # モデルパス設定
     DART_MODEL_PATH: str = os.getenv("DART_MODEL_PATH", "/app/models/dart")
     DART_REPO_ID: str = os.getenv("DART_REPO_ID", "p1atdev/dart-v2-moe-sft")
-    SD_MODEL_PATH: str = os.getenv("SD_MODEL_PATH", "/app/models/animagine-xl-4.0.safetensors")
-    SD_REPO_ID: str = os.getenv("SD_REPO_ID", "Linaqruf/animagine-xl-4.0")
     LLAMA_MODEL_PATH: str = os.getenv("LLAMA_MODEL_PATH", "/app/models/llama3.1")
     LLAMA_REPO_ID: str = os.getenv("LLAMA_REPO_ID", "meta-llama/Llama-3.1-8B-Instruct")
     MISTRAL_MODEL_PATH: str = os.getenv("MISTRAL_MODEL_PATH", "./models/mistral")
     MISTRAL_REPO_ID: str = os.getenv("MISTRAL_REPO_ID", "mistralai/Mistral-7B-v0.1")
 
+    # モデルパス
+    SD_MODEL_PATH: str = os.getenv("SD_MODEL_PATH", "/app/models/animagine-xl-4.0.safetensors")
+    SD_REPO_ID: str = os.getenv("SD_REPO_ID", "Linaqruf/animagine-xl-4.0")
+    SD15_MODEL_PATH: str = "models/sd15_base.safetensors"
+    CONTROLNET_MODEL_PATH: str = "models/control_v11p_sd15_openpose.pth"
+    
     # RAG設定
     VECTOR_DB_PATH: str = os.getenv("VECTOR_DB_PATH", "/app/data/faiss")
     
@@ -33,10 +37,6 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
     HF_TOKEN: Optional[str] = os.getenv("HF_TOKEN")
 
-    # モデルパス
-    SD15_MODEL_PATH: str = "models/sd15_base.safetensors"
-    CONTROLNET_MODEL_PATH: str = "models/control_v11p_sd15_openpose.pth"
-    
     # その他の設定
     DEVICE: str = "cuda"
     TORCH_DTYPE: str = "float16"
