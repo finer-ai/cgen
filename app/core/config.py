@@ -30,6 +30,14 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
     HF_TOKEN: Optional[str] = os.getenv("HF_TOKEN")
 
+    # モデルパス
+    SD15_MODEL_PATH: str = "models/sd15_base.safetensors"
+    CONTROLNET_MODEL_PATH: str = "models/control_v11p_sd15_openpose.pth"
+    
+    # その他の設定
+    DEVICE: str = "cuda"
+    TORCH_DTYPE: str = "float16"
+
     class Config:
         env_file = ".env"
 

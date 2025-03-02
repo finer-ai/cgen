@@ -5,7 +5,6 @@ from services.rag_service import RAGService
 from services.dart_service import DartService
 from services.image_service import ImageService
 from core.errors import RAGError, DartError, ImageGenerationError
-from utils.llm_utils import load_llm
 
 # サービスのインスタンス化
 rag_service = RAGService()

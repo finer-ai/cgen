@@ -23,11 +23,13 @@ class ImageGenerationRequest(BaseModel):
     width: Optional[int] = Field(default=512, description="生成画像の幅")
     height: Optional[int] = Field(default=768, description="生成画像の高さ")
     negative_prompt: Optional[str] = Field(default="", description="ネガティブプロンプト")
+    num_images: Optional[int] = Field(default=1, description="生成する画像の数")
 
 class ImageResponse(BaseModel):
     """画像生成レスポンスのスキーマ"""
     images: List[str] = Field(..., description="生成された画像のBase64エンコードされたリスト")
-    generated_tags: List[str] = Field(..., description="生成に使用されたタグのリスト")
+    bodylines: List[str] = Field(..., description="生成された画像のボディラインのリスト")
+    generated_tags: Optional[List[str]] = Field(default=None, description="生成に使用されたタグのリスト")
     parameters: Dict[str, Any] = Field(..., description="生成パラメータ")
 
 class ErrorResponse(BaseModel):

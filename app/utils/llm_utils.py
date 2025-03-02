@@ -16,9 +16,6 @@ def load_llm(use_local_llm: bool = False):
         Union[HuggingFacePipeline, ChatOpenAI]: 初期化されたLLMインスタンス
     """
     if use_local_llm:
-        # Hugging Faceにログイン
-        subprocess.run(["huggingface-cli", "login", "--token", settings.HF_TOKEN, "--add-to-git-credential"], env=os.environ.copy())
-        
         # モデルとトークナイザーの読み込み
         model = AutoModelForCausalLM.from_pretrained(
             settings.MISTRAL_REPO_ID,
