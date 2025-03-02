@@ -1,9 +1,12 @@
 import os
 from pydantic_settings import BaseSettings
 from typing import List, Dict, Any, Optional
+from pydantic import ConfigDict
 
 class Settings(BaseSettings):
     """アプリケーション設定"""
+    model_config = ConfigDict(env_file=".env")
+
     # アプリ基本設定
     APP_NAME: str = "AnimeImageGenerator"
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
@@ -37,8 +40,5 @@ class Settings(BaseSettings):
     # その他の設定
     DEVICE: str = "cuda"
     TORCH_DTYPE: str = "float16"
-
-    class Config:
-        env_file = ".env"
 
 settings = Settings() 

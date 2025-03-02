@@ -3,19 +3,20 @@ from unittest.mock import Mock, patch, MagicMock
 import base64
 from PIL import Image
 import io
-from app.services.bodyline_service import BodylineService
-from app.core.config import settings
+from services.bodyline_service import BodylineService
+from core.config import settings
+import os
 
 @pytest.fixture
 def mock_controlnet():
-    with patch('app.services.bodyline_service.ControlNetModel') as mock:
+    with patch('services.bodyline_service.ControlNetModel') as mock:
         mock_instance = Mock()
         mock.from_single_file.return_value = mock_instance
         yield mock_instance
 
 @pytest.fixture
 def mock_pipeline():
-    with patch('app.services.bodyline_service.StableDiffusionControlNetPipeline') as mock:
+    with patch('services.bodyline_service.StableDiffusionControlNetPipeline') as mock:
         mock_instance = Mock()
         mock.from_single_file.return_value = mock_instance
         mock_instance.to.return_value = mock_instance
@@ -35,6 +36,7 @@ def bodyline_service(mock_controlnet, mock_pipeline):
     return BodylineService()
 
 class TestBodylineService:
+    @pytest.mark.asyncio
     async def test_init(self, mock_controlnet, mock_pipeline):
         """初期化のテスト"""
         service = BodylineService()
@@ -46,6 +48,7 @@ class TestBodylineService:
         assert service.pipeline == mock_pipeline
         assert mock_pipeline.to.called_with(settings.DEVICE)
 
+    @pytest.mark.asyncio
     async def test_resize_for_controlnet(self, bodyline_service, sample_image):
         """resize_for_controlnetメソッドのテスト"""
         result = await bodyline_service.resize_for_controlnet(sample_image)
@@ -56,6 +59,7 @@ class TestBodylineService:
         # サイズが512x512であることを確認
         assert result.size == (512, 512)
 
+    @pytest.mark.asyncio
     async def test_generate_bodyline(self, bodyline_service):
         """generate_bodylineメソッドのテスト"""
         # モック画像を作成
@@ -77,7 +81,7 @@ class TestBodylineService:
         # 結果の構造を確認
         assert "image" in result
         assert "parameters" in result
-        assert result["image"].startswith("data:image/png;base64,")
+        assert isinstance(result["image"], str)  # Base64文字列であることを確認
         
         # パラメータを確認
         params = result["parameters"]
@@ -93,4 +97,20 @@ class TestBodylineService:
             image=test_image,
             num_inference_steps=20,
             guidance_scale=7.0
-        ) 
+        )
+
+        # 生成された画像を保存
+        # Base64文字列を画像として保存
+        image_bytes = base64.b64decode(result["image"])
+        test_output_dir = "tests/output"
+        os.makedirs(test_output_dir, exist_ok=True)
+        output_path = os.path.join(test_output_dir, "test_generated_bodyline.png")
+        
+        # BytesIOを使用して画像を保存
+        image = Image.open(io.BytesIO(image_bytes))
+        with io.BytesIO() as bio:
+            image.save(bio, format='PNG')
+            with open(output_path, 'wb') as f:
+                f.write(bio.getvalue())
+        
+        print(f"Generated image saved to: {output_path}") 

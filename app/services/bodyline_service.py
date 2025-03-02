@@ -54,10 +54,10 @@ class BodylineService:
         # 生成された画像をBase64に変換
         buffered = io.BytesIO()
         output.images[0].save(buffered, format="PNG")
-        img_str = base64.b64encode(buffered.getvalue()).decode()
+        image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
         
         return {
-            "image": f"data:image/png;base64,{img_str}",
+            "image": image_base64,
             "parameters": {
                 "prompt": prompt,
                 "negative_prompt": negative_prompt,
