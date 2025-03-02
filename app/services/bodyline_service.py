@@ -1,6 +1,6 @@
 from PIL import Image
 import torch
-from diffusers import StableDiffusionControlNetPipeline, ControlNetModel
+from diffusers import StableDiffusionControlNetPipeline, ControlNetModel, StableDiffusionPipeline
 from diffusers.models import ControlNetModel
 from typing import List, Dict, Any
 import io
@@ -9,18 +9,38 @@ from core.config import settings
 
 class BodylineService:
     def __init__(self):
-        # ControlNetモデルの初期化
-        self.controlnet = ControlNetModel.from_single_file(
-            settings.CONTROLNET_MODEL_PATH,
-            torch_dtype=getattr(torch, settings.TORCH_DTYPE)
-        )
-        
-        # SD 1.5 パイプラインの初期化
-        self.pipeline = StableDiffusionControlNetPipeline.from_single_file(
+        # SD 1.5 ベースモデルの初期化
+        self.base_pipeline = StableDiffusionPipeline.from_single_file(
             settings.SD15_MODEL_PATH,
-            controlnet=self.controlnet,
-            torch_dtype=getattr(torch, settings.TORCH_DTYPE)
+            torch_dtype=getattr(torch, settings.TORCH_DTYPE),
+            use_safetensors=True
         ).to(settings.DEVICE)
+        
+        # ControlNetモデルの初期化
+        self.controlnet_models = []
+        self.controlnet_scales = []
+        for config in settings.CONTROLNET_CONFIGS:
+            controlnet = ControlNetModel.from_single_file(
+                config["path"],
+                torch_dtype=getattr(torch, settings.TORCH_DTYPE)
+            ).to(settings.DEVICE)
+            self.controlnet_models.append(controlnet)
+            self.controlnet_scales.append(config["conditioning_scale"])
+
+        # マルチControlNetパイプラインの作成
+        self.pipeline = StableDiffusionControlNetPipeline(
+            vae=self.base_pipeline.vae,
+            text_encoder=self.base_pipeline.text_encoder,
+            tokenizer=self.base_pipeline.tokenizer,
+            unet=self.base_pipeline.unet,
+            scheduler=self.base_pipeline.scheduler,
+            safety_checker=self.base_pipeline.safety_checker,
+            feature_extractor=self.base_pipeline.feature_extractor,
+            controlnet=self.controlnet_models
+        ).to(settings.DEVICE)
+
+        # 不要になったベースパイプラインを解放
+        del self.base_pipeline
 
     @staticmethod
     def calculate_resize_dimensions(image: Image.Image, max_long_side: int) -> tuple[int, int]:
@@ -92,12 +112,18 @@ class BodylineService:
         # 画像生成
         output = self.pipeline(
             prompt=prompt,
+            image=[control_image] * len(self.controlnet_models),
             negative_prompt=negative_prompt,
-            image=control_image,
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             width=output_size[0],
-            height=output_size[1]
+            height=output_size[1],
+            denoising_strength=0.13,
+            num_images_per_prompt=1,
+            guess_mode=[True] * len(self.controlnet_models),
+            controlnet_conditioning_scale=self.controlnet_scales,
+            guidance_start=[0.0] * len(self.controlnet_models),
+            guidance_end=[1.0] * len(self.controlnet_models)
         )
         
         # 生成された画像をBase64に変換

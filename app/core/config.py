@@ -14,17 +14,13 @@ class Settings(BaseSettings):
     # モデルパス設定
     DART_MODEL_PATH: str = os.getenv("DART_MODEL_PATH", "/app/models/dart")
     DART_REPO_ID: str = os.getenv("DART_REPO_ID", "p1atdev/dart-v2-moe-sft")
+    SD_MODEL_PATH: str = os.getenv("SD_MODEL_PATH", "/app/models/animagine-xl-4.0.safetensors")
+    SD_REPO_ID: str = os.getenv("SD_REPO_ID", "Linaqruf/animagine-xl-4.0")
     LLAMA_MODEL_PATH: str = os.getenv("LLAMA_MODEL_PATH", "/app/models/llama3.1")
     LLAMA_REPO_ID: str = os.getenv("LLAMA_REPO_ID", "meta-llama/Llama-3.1-8B-Instruct")
     MISTRAL_MODEL_PATH: str = os.getenv("MISTRAL_MODEL_PATH", "./models/mistral")
     MISTRAL_REPO_ID: str = os.getenv("MISTRAL_REPO_ID", "mistralai/Mistral-7B-v0.1")
 
-    # モデルパス
-    SD_MODEL_PATH: str = os.getenv("SD_MODEL_PATH", "/app/models/animagine-xl-4.0.safetensors")
-    SD_REPO_ID: str = os.getenv("SD_REPO_ID", "Linaqruf/animagine-xl-4.0")
-    SD15_MODEL_PATH: str = "models/LoRAMergeModel_animepose_outline_sotai.fp16.safetensors"
-    CONTROLNET_MODEL_PATH: str = "models/Sotai_1K_ControlNet-epoch=989.ckpt"
-    
     # RAG設定
     VECTOR_DB_PATH: str = os.getenv("VECTOR_DB_PATH", "/app/data/faiss")
     
@@ -37,6 +33,19 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
     HF_TOKEN: Optional[str] = os.getenv("HF_TOKEN")
 
+    # モデルパス
+    SD15_MODEL_PATH: str = "models/LoRAMergeModel_animepose_outline_sotai.fp16.safetensors"
+    CONTROLNET_MODEL_PATHS: List[str] = [
+        {
+            "path": "models/Sotai_1K_ControlNet-epoch=989.ckpt",
+            "conditioning_scale": 1.4
+        },
+        {
+            "path": "models/Sotai_sketch_ControlNet_epoch=0288_train_loss_epoch=9.7849e-03.ckpt",
+            "conditioning_scale": 1.3
+        }
+    ]
+    
     # その他の設定
     DEVICE: str = "cuda"
     TORCH_DTYPE: str = "float16"

@@ -3,22 +3,30 @@ from unittest.mock import Mock, patch, MagicMock
 import base64
 from PIL import Image
 import io
-from services.bodyline_service import BodylineService
+from services.bodyline_service import BodylineService, StableDiffusionControlNetPipeline
 from core.config import settings
 import os
+
+@pytest.fixture
+def mock_base_pipeline():
+    with patch('services.bodyline_service.StableDiffusionPipeline') as mock:
+        mock_instance = Mock()
+        mock.from_single_file.return_value = mock_instance
+        mock_instance.to.return_value = mock_instance
+        yield mock_instance
 
 @pytest.fixture
 def mock_controlnet():
     with patch('services.bodyline_service.ControlNetModel') as mock:
         mock_instance = Mock()
         mock.from_single_file.return_value = mock_instance
+        mock_instance.to.return_value = mock_instance
         yield mock_instance
 
 @pytest.fixture
 def mock_pipeline():
     with patch('services.bodyline_service.StableDiffusionControlNetPipeline') as mock:
         mock_instance = Mock()
-        mock.from_single_file.return_value = mock_instance
         mock_instance.to.return_value = mock_instance
         yield mock_instance
 
@@ -32,21 +40,40 @@ def sample_image():
     return f"data:image/png;base64,{img_str}"
 
 @pytest.fixture
-def bodyline_service(mock_controlnet, mock_pipeline):
-    return BodylineService()
+def bodyline_service(mock_base_pipeline, mock_controlnet, mock_pipeline):
+    with patch('services.bodyline_service.StableDiffusionControlNetPipeline') as pipeline_cls:
+        pipeline_cls.return_value = mock_pipeline
+        # テスト用のモデルパスを設定
+        with patch('core.config.settings.CONTROLNET_MODEL_PATHS', ['model1.pth', 'model2.pth']):
+            return BodylineService()
 
 class TestBodylineService:
     @pytest.mark.asyncio
-    async def test_init(self, mock_controlnet, mock_pipeline):
+    async def test_init(self, mock_base_pipeline, mock_controlnet, mock_pipeline):
         """初期化のテスト"""
-        service = BodylineService()
-        
-        # ControlNetの初期化を確認
-        assert service.controlnet == mock_controlnet
-        
-        # パイプラインの初期化を確認
-        assert service.pipeline == mock_pipeline
-        assert mock_pipeline.to.called_with(settings.DEVICE)
+        with patch('core.config.settings.CONTROLNET_MODEL_PATHS', ['model1.pth', 'model2.pth']):
+            service = BodylineService()
+            
+            # ControlNetモデルの初期化を確認
+            assert len(service.controlnet_models) == 2
+            for model in service.controlnet_models:
+                assert model == mock_controlnet
+            
+            # パイプラインの初期化を確認
+            assert service.pipeline == mock_pipeline
+            assert mock_pipeline.to.called_with(settings.DEVICE)
+            
+            # パイプラインが正しいパラメータで作成されたことを確認
+            StableDiffusionControlNetPipeline.assert_called_once_with(
+                vae=mock_base_pipeline.vae,
+                text_encoder=mock_base_pipeline.text_encoder,
+                tokenizer=mock_base_pipeline.tokenizer,
+                unet=mock_base_pipeline.unet,
+                scheduler=mock_base_pipeline.scheduler,
+                safety_checker=mock_base_pipeline.safety_checker,
+                feature_extractor=mock_base_pipeline.feature_extractor,
+                controlnet=service.controlnet_models
+            )
 
     def test_calculate_resize_dimensions(self, bodyline_service):
         """calculate_resize_dimensionsメソッドのテスト"""
