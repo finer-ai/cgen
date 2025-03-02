@@ -48,16 +48,36 @@ class TestBodylineService:
         assert service.pipeline == mock_pipeline
         assert mock_pipeline.to.called_with(settings.DEVICE)
 
+    def test_calculate_resize_dimensions(self, bodyline_service):
+        """calculate_resize_dimensionsメソッドのテスト"""
+        # 横長画像のテスト
+        landscape_image = Image.new('RGB', (800, 400))
+        landscape_size = bodyline_service.calculate_resize_dimensions(landscape_image, 512)
+        assert landscape_size == (512, 256)
+        
+        # 縦長画像のテスト
+        portrait_image = Image.new('RGB', (400, 800))
+        portrait_size = bodyline_service.calculate_resize_dimensions(portrait_image, 512)
+        assert portrait_size == (256, 512)
+        
+        # 正方形画像のテスト
+        square_image = Image.new('RGB', (600, 600))
+        square_size = bodyline_service.calculate_resize_dimensions(square_image, 512)
+        assert square_size == (512, 512)
+
     @pytest.mark.asyncio
     async def test_resize_for_controlnet(self, bodyline_service, sample_image):
         """resize_for_controlnetメソッドのテスト"""
+        # デフォルトサイズのテスト
         result = await bodyline_service.resize_for_controlnet(sample_image)
-        
-        # 結果がPIL.Imageインスタンスであることを確認
         assert isinstance(result, Image.Image)
-        
-        # サイズが512x512であることを確認
         assert result.size == (512, 512)
+        
+        # カスタムサイズのテスト
+        custom_size = (256, 256)
+        result_custom = await bodyline_service.resize_for_controlnet(sample_image, target_size=custom_size)
+        assert isinstance(result_custom, Image.Image)
+        assert result_custom.size == custom_size
 
     @pytest.mark.asyncio
     async def test_generate_bodyline(self, bodyline_service):
@@ -129,7 +149,8 @@ class TestBodylineServiceIntegration:
     async def test_generate_bodyline_with_real_model(self, bodyline_service):
         """実際のモデルを使用してボディライン生成をテスト"""
         # テスト用の入力画像を作成
-        test_image = Image.new('RGB', (512, 512), color='white')
+        test_image = Image.open("tests/data/test_pose.png").convert('RGB')
+        test_image = test_image.resize((512, 512), Image.Resampling.LANCZOS)
 
         prompt = "anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)"
         # 実際のモデルを使用して画像生成

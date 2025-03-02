@@ -22,14 +22,48 @@ class BodylineService:
             torch_dtype=getattr(torch, settings.TORCH_DTYPE)
         ).to(settings.DEVICE)
 
-    async def resize_for_controlnet(self, image_data: str) -> Image.Image:
-        """Base64画像をデコードしてControlNet用にリサイズ"""
+    @staticmethod
+    def calculate_resize_dimensions(image: Image.Image, max_long_side: int) -> tuple[int, int]:
+        """画像の長辺を指定サイズに合わせた時の縦横サイズを計算する
+
+        Args:
+            image (Image.Image): 元画像
+            max_long_side (int): リサイズ後の長辺の長さ
+
+        Returns:
+            tuple[int, int]: (width, height)のタプル
+        """
+        width, height = image.size
+        if width >= height:
+            # 横長の場合
+            new_width = max_long_side
+            new_height = int(height * (max_long_side / width))
+        else:
+            # 縦長の場合
+            new_height = max_long_side
+            new_width = int(width * (max_long_side / height))
+        
+        return (new_width, new_height)
+
+    async def resize_for_controlnet(
+        self,
+        image_data: str,
+        target_size: tuple[int, int] = (512, 512)
+    ) -> Image.Image:
+        """Base64画像をデコードしてリサイズ
+
+        Args:
+            image_data (str): Base64エンコードされた画像データ
+            target_size (tuple[int, int], optional): リサイズ後のサイズ(width, height). Defaults to (512, 512).
+
+        Returns:
+            Image.Image: リサイズされた画像
+        """
         # Base64をデコード
         image_bytes = base64.b64decode(image_data.split(",")[1])
         image = Image.open(io.BytesIO(image_bytes))
         
-        # SD 1.5の制限に合わせてリサイズ（最大512x512）
-        target_size = (512, 512)
+        # 指定サイズにリサイズ
         image = image.resize(target_size, Image.Resampling.LANCZOS)
         return image
 
