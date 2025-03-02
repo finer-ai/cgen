@@ -222,7 +222,7 @@ class TestBodylineServiceIntegration:
         result = await bodyline_service.generate_bodyline(
             control_image=test_image,
             prompt=prompt,
-            negative_prompt=f"(wings:1.6), (clothes, garment, lighting, gray, missing limb, extra line, extra limb, extra arm, extra legs, hair, bangs, fringe, forelock, front hair, fill:1.4), (ink pool:1.6)",
+            negative_prompt=f"(wings:1.6), (clothes:1.4), (garment:1.4), (lighting:1.4), (gray:1.4), (missing limb:1.4), (extra line:1.4), (extra limb:1.4), (extra arm:1.4), (extra legs:1.4), (hair:1.4), (bangs:1.4), (fringe:1.4), (forelock:1.4), (front hair:1.4), (fill:1.4), (ink pool:1.6)",
             num_inference_steps=20,  # テスト用に少ない推論ステップ数
             guidance_scale=8,
             output_size=output_size

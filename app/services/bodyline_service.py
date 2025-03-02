@@ -6,6 +6,8 @@ from typing import List, Dict, Any
 import io
 import base64
 from core.config import settings
+import cv2
+import numpy as np
 
 class BodylineService:
     def __init__(self):
@@ -42,6 +44,24 @@ class BodylineService:
         self.pipeline.scheduler = UniPCMultistepScheduler.from_config(self.pipeline.scheduler.config)
 
         del self.base_pipeline
+
+    @staticmethod        
+    def binarize_image(image: Image.Image) -> np.ndarray:
+        image = np.array(image.convert('L'))
+        # 色反転
+        image = 255 - image
+        
+        # ヒストグラム平坦化
+        clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(8, 8))
+        image = clahe.apply(image)
+
+        # ガウシアンブラー適用
+        image = cv2.GaussianBlur(image, (5, 5), 0)
+
+        # 適応的二値化
+        binary_image = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 9, -8)
+
+        return binary_image
 
     @staticmethod
     def calculate_resize_dimensions(image: Image.Image, max_long_side: int) -> tuple[int, int]:
@@ -126,10 +146,15 @@ class BodylineService:
             guidance_start=[0.0] * len(self.controlnet_models),
             guidance_end=[1.0] * len(self.controlnet_models)
         )
+
+        image = output.images[0]
+        
+        # 画像を二値化
+        image = Image.fromarray(self.binarize_image(image))
         
         # 生成された画像をBase64に変換
         buffered = io.BytesIO()
-        output.images[0].save(buffered, format="PNG")
+        image.save(buffered, format="PNG")
         image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
         
         return {
