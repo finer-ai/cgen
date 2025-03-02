@@ -56,9 +56,12 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
                 num_images=num_images
             )
             
+            quality_tags = ["masterpiece", "high score", "great score", "absurdres"]
+            joined_tags = ", ".join(filtered_tags + quality_tags)
+
             return {
                 "images": result["images"],
-                "generated_tags": filtered_tags,
+                "generated_tags": joined_tags,
                 "parameters": {
                     "steps": steps,
                     "cfg_scale": cfg_scale,
