@@ -3,9 +3,11 @@
 /models
 /app/models
 /app/data
+/output
 
 __pycache__
 
 .env
 
 *.png
+*.json
