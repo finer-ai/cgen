@@ -25,9 +25,10 @@ def mock_controlnet():
 
 @pytest.fixture
 def mock_pipeline():
-    with patch('services.bodyline_service.StableDiffusionControlNetPipeline') as mock:
+    with patch('services.bodyline_service.StableDiffusionControlNetPipeline') as mock_cls:
         mock_instance = Mock()
         mock_instance.to.return_value = mock_instance
+        mock_cls.return_value = mock_instance
         yield mock_instance
 
 @pytest.fixture
@@ -43,6 +44,7 @@ def sample_image():
 def bodyline_service(mock_base_pipeline, mock_controlnet, mock_pipeline):
     with patch('services.bodyline_service.StableDiffusionControlNetPipeline') as pipeline_cls:
         pipeline_cls.return_value = mock_pipeline
+        pipeline_cls.return_value.to.return_value = mock_pipeline
         # テスト用のモデル設定
         test_configs = [
             {"path": "model1.pth", "conditioning_scale": 1.4},
