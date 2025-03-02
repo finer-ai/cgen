@@ -61,7 +61,7 @@ class TestBodylineService:
             {"path": "model1.pth", "conditioning_scale": 1.4},
             {"path": "model2.pth", "conditioning_scale": 1.3}
         ]
-        with patch('services.bodyline_service.StableDiffusionControlNetPipeline') as mock_pipeline_cls:
+        with patch('services.bodyline_service.StableDiffusionControlNetPipeline', autospec=True) as mock_pipeline_cls:
             mock_pipeline_cls.return_value = mock_pipeline
             mock_pipeline_cls.return_value.to.return_value = mock_pipeline
             
