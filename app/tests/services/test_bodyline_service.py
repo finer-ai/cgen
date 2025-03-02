@@ -6,6 +6,7 @@ import io
 from services.bodyline_service import BodylineService, StableDiffusionControlNetPipeline
 from core.config import settings
 import os
+from unittest.mock import call
 
 @pytest.fixture
 def mock_base_pipeline():
@@ -61,27 +62,24 @@ class TestBodylineService:
             {"path": "model1.pth", "conditioning_scale": 1.4},
             {"path": "model2.pth", "conditioning_scale": 1.3}
         ]
-        with patch('services.bodyline_service.StableDiffusionControlNetPipeline', autospec=True) as mock_pipeline_cls:
-            mock_pipeline_cls.return_value = mock_pipeline
-            mock_pipeline_cls.return_value.to.return_value = mock_pipeline
+        with patch('core.config.settings.CONTROLNET_CONFIGS', test_configs):
+            service = BodylineService()
             
-            with patch('core.config.settings.CONTROLNET_CONFIGS', test_configs):
-                service = BodylineService()
-                
-                # ControlNetモデルの初期化を確認
-                assert len(service.controlnet_models) == 2
-                for model in service.controlnet_models:
-                    assert model == mock_controlnet
-                
-                # スケールの確認
-                assert service.controlnet_scales == [1.4, 1.3]
-                
-                # パイプラインの初期化を確認
-                assert service.pipeline == mock_pipeline
-                assert mock_pipeline.to.called_with(settings.DEVICE)
-                
-                # パイプラインが正しいパラメータで作成されたことを確認
-                mock_pipeline_cls.assert_called_once_with(
+            # ControlNetモデルの初期化を確認
+            assert len(service.controlnet_models) == 2
+            for model in service.controlnet_models:
+                assert model == mock_controlnet
+            
+            # スケールの確認
+            assert service.controlnet_scales == [1.4, 1.3]
+            
+            # パイプラインの初期化を確認
+            assert service.pipeline == mock_pipeline
+            assert mock_pipeline.to.called_with(settings.DEVICE)
+            
+            # パイプラインが正しいパラメータで作成されたことを確認
+            mock_pipeline.assert_has_calls([
+                call(
                     vae=mock_base_pipeline.vae,
                     text_encoder=mock_base_pipeline.text_encoder,
                     tokenizer=mock_base_pipeline.tokenizer,
@@ -91,6 +89,7 @@ class TestBodylineService:
                     feature_extractor=mock_base_pipeline.feature_extractor,
                     controlnet=service.controlnet_models
                 )
+            ])
 
     def test_calculate_resize_dimensions(self, bodyline_service):
         """calculate_resize_dimensionsメソッドのテスト"""
