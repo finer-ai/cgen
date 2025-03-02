@@ -201,7 +201,7 @@ class TestBodylineServiceIntegration:
         
         # 画像のサイズと形式を確認（8ピクセル以内の誤差を許容）
         actual_width, actual_height = image.size
-        expected_width, expected_height = output_size
+        expected_width, expected_height = new_size
         assert abs(actual_width - expected_width) <= 8, f"Width difference is too large: {abs(actual_width - expected_width)}"
         assert abs(actual_height - expected_height) <= 8, f"Height difference is too large: {abs(actual_height - expected_height)}"
         assert image.mode in ['RGB', 'RGBA'] 
