@@ -84,10 +84,11 @@ class TestBodylineService:
         """generate_bodylineメソッドのテスト"""
         # モック画像を作成
         test_image = Image.new('RGB', (512, 512), color='white')
+        output_size = (768, 768)
         
         # パイプラインの出力をモック
         mock_output = MagicMock()
-        mock_output.images = [test_image]
+        mock_output.images = [Image.new('RGB', output_size, color='white')]
         bodyline_service.pipeline.return_value = mock_output
         
         result = await bodyline_service.generate_bodyline(
@@ -95,7 +96,8 @@ class TestBodylineService:
             prompt="test prompt",
             negative_prompt="test negative",
             num_inference_steps=20,
-            guidance_scale=7.0
+            guidance_scale=7.0,
+            output_size=output_size
         )
         
         # 結果の構造を確認
@@ -109,6 +111,7 @@ class TestBodylineService:
         assert params["negative_prompt"] == "test negative"
         assert params["num_inference_steps"] == 20
         assert params["guidance_scale"] == 7.0
+        assert params["output_size"] == output_size
         
         # パイプラインが正しいパラメータで呼び出されたことを確認
         bodyline_service.pipeline.assert_called_once_with(
@@ -116,13 +119,15 @@ class TestBodylineService:
             negative_prompt="test negative",
             image=test_image,
             num_inference_steps=20,
-            guidance_scale=7.0
+            guidance_scale=7.0,
+            width=output_size[0],
+            height=output_size[1]
         )
 
         # 生成された画像を保存
         # Base64文字列を画像として保存
         image_bytes = base64.b64decode(result["image"])
-        test_output_dir = "tests/output"
+        test_output_dir = "tests"
         os.makedirs(test_output_dir, exist_ok=True)
         output_path = os.path.join(test_output_dir, "test_generated_bodyline.png")
         
@@ -134,6 +139,9 @@ class TestBodylineService:
                 f.write(bio.getvalue())
         
         print(f"Generated image saved to: {output_path}")
+        
+        # 生成された画像のサイズを確認
+        assert image.size == output_size
 
 @pytest.mark.integration
 @pytest.mark.slow
@@ -150,16 +158,22 @@ class TestBodylineServiceIntegration:
         """実際のモデルを使用してボディライン生成をテスト"""
         # テスト用の入力画像を作成
         test_image = Image.open("tests/data/test_pose.png").convert('RGB')
-        test_image = test_image.resize((512, 512), Image.Resampling.LANCZOS)
+        
+        # 長辺786ピクセルにリサイズ
+        new_size = bodyline_service.calculate_resize_dimensions(test_image, 786)
+        test_image = test_image.resize(new_size, Image.Resampling.LANCZOS)
+        print(f"Input image dimensions: {test_image.size}")
 
         prompt = "anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)"
+        output_size = (786, 786)
         # 実際のモデルを使用して画像生成
         result = await bodyline_service.generate_bodyline(
             control_image=test_image,
             prompt=prompt,
             negative_prompt=f"(wings:1.6), (clothes, garment, lighting, gray, missing limb, extra line, extra limb, extra arm, extra legs, hair, bangs, fringe, forelock, front hair, fill:1.4), (ink pool:1.6)",
             num_inference_steps=20,  # テスト用に少ない推論ステップ数
-            guidance_scale=8
+            guidance_scale=8,
+            output_size=output_size
         )
         
         # 結果の構造を確認
@@ -169,7 +183,7 @@ class TestBodylineServiceIntegration:
         
         # 生成された画像を保存
         image_bytes = base64.b64decode(result["image"])
-        test_output_dir = "tests/output/integration"
+        test_output_dir = "tests"
         os.makedirs(test_output_dir, exist_ok=True)
         output_path = os.path.join(test_output_dir, "test_generated_bodyline_real.png")
         
@@ -181,7 +195,8 @@ class TestBodylineServiceIntegration:
                 f.write(bio.getvalue())
         
         print(f"Real model generated image saved to: {output_path}")
+        print(f"Output image dimensions: {image.size}")
         
         # 画像のサイズと形式を確認
-        assert image.size == (512, 512)
+        assert image.size == output_size
         assert image.mode in ['RGB', 'RGBA'] 

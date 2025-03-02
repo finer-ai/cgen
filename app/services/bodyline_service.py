@@ -73,16 +73,31 @@ class BodylineService:
         prompt: str = "1girl, simple background, white background",
         negative_prompt: str = "nsfw, nude, bad anatomy, bad proportions",
         num_inference_steps: int = 30,
-        guidance_scale: float = 7.5
+        guidance_scale: float = 7.5,
+        output_size: tuple[int, int] = (512, 512)
     ) -> Dict[str, Any]:
-        """素体（ボディライン）を生成"""
+        """素体（ボディライン）を生成
+
+        Args:
+            control_image (Image.Image): 制御用の入力画像
+            prompt (str, optional): 生成時の指示プロンプト
+            negative_prompt (str, optional): 生成時の否定プロンプト
+            num_inference_steps (int, optional): 推論ステップ数
+            guidance_scale (float, optional): ガイダンススケール
+            output_size (tuple[int, int], optional): 生成する画像のサイズ(width, height). Defaults to (512, 512).
+
+        Returns:
+            Dict[str, Any]: 生成された画像とパラメータ
+        """
         # 画像生成
         output = self.pipeline(
             prompt=prompt,
             negative_prompt=negative_prompt,
             image=control_image,
             num_inference_steps=num_inference_steps,
-            guidance_scale=guidance_scale
+            guidance_scale=guidance_scale,
+            width=output_size[0],
+            height=output_size[1]
         )
         
         # 生成された画像をBase64に変換
@@ -96,6 +111,7 @@ class BodylineService:
                 "prompt": prompt,
                 "negative_prompt": negative_prompt,
                 "num_inference_steps": num_inference_steps,
-                "guidance_scale": guidance_scale
+                "guidance_scale": guidance_scale,
+                "output_size": output_size
             }
         } 
