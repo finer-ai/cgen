@@ -1,6 +1,6 @@
 from PIL import Image
 import torch
-from diffusers import StableDiffusionControlNetPipeline, ControlNetModel, StableDiffusionPipeline
+from diffusers import StableDiffusionControlNetPipeline, ControlNetModel, StableDiffusionPipeline, UniPCMultistepScheduler
 from diffusers.models import ControlNetModel
 from typing import List, Dict, Any
 import io
@@ -39,7 +39,8 @@ class BodylineService:
             controlnet=self.controlnet_models
         ).to(settings.DEVICE)
 
-        # 不要になったベースパイプラインを解放
+        self.pipeline.scheduler = UniPCMultistepScheduler.from_config(self.pipeline.scheduler.config)
+
         del self.base_pipeline
 
     @staticmethod
