@@ -4,12 +4,14 @@ from typing import Dict, Any
 from services.rag_service import RAGService
 from services.dart_service import DartService
 from services.image_service import ImageService
+from services.bodyline_service import BodylineService
 from core.errors import RAGError, DartError, ImageGenerationError
-
+from PIL import Image
 # サービスのインスタンス化
 rag_service = RAGService()
 dart_service = DartService()
 image_service = ImageService()
+bodyline_service = BodylineService()
 
 async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
     """RunPodのハンドラー関数"""
@@ -32,27 +34,27 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
 
         try:
             if prompt.startswith("prompt:"):
-              joined_tags = [tag.strip() for tag in prompt.split("prompt:")[1].split(",")]
+                joined_tags = [tag.strip() for tag in prompt.split("prompt:")[1].split(",")]
             else:
-              # RAGでタグ候補を取得
-              tag_candidates = await rag_service.generate_tag_candidates(prompt)
-              print("tag_candidates", tag_candidates)
-              
-              # Dartでタグを補完
-              final_tags = await dart_service.generate_final_tags(tag_candidates)
-              print("final_tags", final_tags)
+                # RAGでタグ候補を取得
+                tag_candidates = await rag_service.generate_tag_candidates(prompt)
+                print("tag_candidates", tag_candidates)
+                
+                # Dartでタグを補完
+                final_tags = await dart_service.generate_final_tags(tag_candidates)
+                print("final_tags", final_tags)
 
-              # コンテキストに基づいてタグをフィルタリング
-              filtered_tags = await dart_service.filter_tags_by_context(
-                  tags_str=", ".join(final_tags),
-                  context_prompt=prompt
-              )
-              quality_tags = ["masterpiece", "high score", "great score", "absurdres"]
-              joined_tags = filtered_tags + quality_tags
+                # コンテキストに基づいてタグをフィルタリング
+                filtered_tags = await dart_service.filter_tags_by_context(
+                    tags_str=", ".join(final_tags),
+                    context_prompt=prompt
+                )
+                quality_tags = ["masterpiece", "high score", "great score", "absurdres"]
+                joined_tags = filtered_tags + quality_tags
             print("joined_tags", joined_tags)
 
             # 画像生成
-            result = await image_service.generate_image(
+            image_result = await image_service.generate_image(
                 tags=joined_tags,
                 steps=steps,
                 cfg_scale=cfg_scale,
@@ -61,18 +63,26 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
                 negative_prompt=negative_prompt,
                 num_images=num_images
             )
-            
+
+            # 生成された画像を使ってボディライン生成
+            output_size = bodyline_service.calculate_resize_dimensions(image_result["images"][0], 786)
+            bodyline_result = await bodyline_service.generate_bodyline(
+                control_images=image_result["images"],
+                prompt="anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)",
+                negative_prompt="(wings:1.6), (clothes:1.4), (garment:1.4), (lighting:1.4), (gray:1.4), (missing limb:1.4), (extra line:1.4), (extra limb:1.4), (extra arm:1.4), (extra legs:1.4), (hair:1.4), (bangs:1.4), (fringe:1.4), (forelock:1.4), (front hair:1.4), (fill:1.4), (ink pool:1.6)",
+                num_inference_steps=20,
+                guidance_scale=8,
+                input_resolution=512,
+                output_size=output_size
+            )
 
             return {
-                "images": result["images"],
+                "images": image_result["images"],
+                "bodylines": bodyline_result["images"],
                 "generated_tags": joined_tags,
                 "parameters": {
-                    "steps": steps,
-                    "cfg_scale": cfg_scale,
-                    "width": width,
-                    "height": height,
-                    "negative_prompt": negative_prompt,
-                    "num_images": num_images
+                    "image_parameters": image_result["parameters"],
+                    "bodyline_parameters": bodyline_result["parameters"]
                 }
             }
             

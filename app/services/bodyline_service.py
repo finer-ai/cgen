@@ -2,7 +2,7 @@ from PIL import Image
 import torch
 from diffusers import StableDiffusionControlNetPipeline, ControlNetModel, StableDiffusionPipeline, UniPCMultistepScheduler
 from diffusers.models import ControlNetModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 import io
 import base64
 from core.config import settings
@@ -119,58 +119,57 @@ class BodylineService:
 
     async def generate_bodyline(
         self,
-        control_image: Image.Image,
-        prompt: str = "1girl, simple background, white background",
-        negative_prompt: str = "nsfw, nude, bad anatomy, bad proportions",
-        num_inference_steps: int = 30,
-        guidance_scale: float = 7.5,
-        output_size: tuple[int, int] = (512, 512)
-    ) -> Dict[str, Any]:
-        """素体（ボディライン）を生成
+        control_images: List[Image.Image],
+        prompt: str,
+        negative_prompt: str = "",
+        num_inference_steps: int = 20,
+        guidance_scale: float = 7.0,
+        input_resolution: int = 512,
+        output_size: Tuple[int, int] = (768, 768)
+    ) -> List[Dict[str, Any]]:
+        """複数の画像からボディラインを生成"""
+        # 入力画像のリサイズ
+        input_size = self.calculate_resize_dimensions(control_images[0], input_resolution)
+        resized_images = []
+        for image in control_images:
+            resized_image = image.resize(input_size, Image.Resampling.LANCZOS)
+            resized_images.append(resized_image)
 
-        Args:
-            control_image (Image.Image): 制御用の入力画像
-            prompt (str, optional): 生成時の指示プロンプト
-            negative_prompt (str, optional): 生成時の否定プロンプト
-            num_inference_steps (int, optional): 推論ステップ数
-            guidance_scale (float, optional): ガイダンススケール
-            output_size (tuple[int, int], optional): 生成する画像のサイズ(width, height). Defaults to (512, 512).
+        # 各画像に対して個別にパイプラインを呼び出す
+        images = []
+        for control_image in resized_images:
+            result = self.pipeline(
+                prompt=prompt,
+                negative_prompt=negative_prompt,
+                image=[control_image] * len(self.controlnet_models),  # 各ControlNetモデル用に同じ画像を複製
+                num_inference_steps=num_inference_steps,
+                guidance_scale=guidance_scale,
+                width=output_size[0],
+                height=output_size[1],
+                denoising_strength=0.13,
+                num_images_per_prompt=1,
+                guess_mode=[True] * len(self.controlnet_models),
+                controlnet_conditioning_scale=self.controlnet_scales,
+                guidance_start=[0.0] * len(self.controlnet_models),
+                guidance_end=[1.0] * len(self.controlnet_models)
+            )
 
-        Returns:
-            Dict[str, Any]: 生成された画像とパラメータ
-        """
-        # 画像生成
-        output = self.pipeline(
-            prompt=prompt,
-            image=[control_image] * len(self.controlnet_models),
-            negative_prompt=negative_prompt,
-            num_inference_steps=num_inference_steps,
-            guidance_scale=guidance_scale,
-            width=output_size[0],
-            height=output_size[1],
-            denoising_strength=0.13,
-            num_images_per_prompt=1,
-            guess_mode=[True] * len(self.controlnet_models),
-            controlnet_conditioning_scale=self.controlnet_scales,
-            guidance_start=[0.0] * len(self.controlnet_models),
-            guidance_end=[1.0] * len(self.controlnet_models)
-        )
-
-        image = output.images[0]
-        
-        # 画像を二値化
-        binary_image = self.binarize_image(image)
-        
-        # 二値化した画像をRGBA画像に変換(赤色で表示)
-        rgba_image = self.create_rgba_image(binary_image, [255, 0, 0])
-        
-        # 生成された画像をBase64に変換
-        buffered = io.BytesIO()
-        rgba_image.save(buffered, format="PNG")
-        image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+            image = result.images[0]
+            
+            # 画像を二値化
+            binary_image = self.binarize_image(image)
+            # 二値化した画像をRGBA画像に変換
+            rgba_image = self.create_rgba_image(binary_image, [0, 0, 0])
+            
+            # 生成された画像をBase64に変換
+            buffered = io.BytesIO()
+            rgba_image.save(buffered, format="PNG")
+            image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+            images.append(image_base64)
+            
         
         return {
-            "image": image_base64,
+            "images": images,
             "parameters": {
                 "prompt": prompt,
                 "negative_prompt": negative_prompt,
