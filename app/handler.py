@@ -110,7 +110,7 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         return {"error": f"Unexpected error: {str(e)}"}
 
 import asyncio
-async def main():
+async def test():
     test_data = {
         "input": {
             # "prompt": "prompt:original, 1girl, solo, (jumping:1.3), jacket, school uniform, pose, miniskirt, brown hair, blue eyes, pleated skirt, red footwear, red jacket, shoes, striped clothes, thighs, white thighhighs",
@@ -139,6 +139,5 @@ async def main():
             f.write(image_data)
             
 if __name__ == "__main__":
-    # runpod.serverless.start({"handler": handler})
-
-    asyncio.run(main())
+    runpod.serverless.start({"handler": handler})
+    # asyncio.run(test())
