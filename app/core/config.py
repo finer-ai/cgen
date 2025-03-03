@@ -61,7 +61,7 @@ class Settings(BaseSettings):
             "requires_auth": False
         },
         {
-            "name": "sotai-lora",
+            "name": "sotai-sd-model",
             "path": f"{MODEL_DIR}/LoRAMergeModel_animepose_outline_sotai.fp16.safetensors",
             "url": "https://huggingface.co/yeq6x/webui-models/resolve/main/Stable-diffusion/LoRAMergeModel_animepose_outline_sotai.fp16.safetensors",
             "requires_auth": True

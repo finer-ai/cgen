@@ -34,7 +34,7 @@ class DartService:
         self.llm = load_llm(use_local_llm=use_local_llm)
         
         # タグフィルタリング用のプロンプトテンプレート
-        self.set_tag_filter_prompt("""
+        self.set_tag_filter_template("""
 From the tag list below, please remove tags that significantly deviate from the given context,
 and keep only the tags that are relevant.
 Please output the filtered tags as a comma-separated list.
@@ -54,7 +54,7 @@ Tag List: {tags_str}
 Output:""")
 
         # タグの重み付け用のプロンプトテンプレート
-        self.set_weight_prompt("""
+        self.set_tag_weight_template("""
 Please analyze the context and add weights ONLY when there are explicit or strongly implied modifiers in the context.
 Be aggressive in applying weights when modifiers are present, but DO NOT add weights when there are no modifiers.
 
@@ -132,7 +132,7 @@ Tags: {tags_str}
 
 Output:""")
 
-    def set_tag_filter_prompt(self, template: str):
+    def set_tag_filter_template(self, template: str):
         self.tag_filter_prompt = PromptTemplate(
             template=template,
             input_variables=["context_prompt", "tags_str"]
@@ -141,7 +141,7 @@ Output:""")
             self.tag_filter_prompt | self.llm | StrOutputParser()
         )
 
-    def set_tag_weight_prompt(self, template: str):
+    def set_tag_weight_template(self, template: str):
         self.tag_weight_prompt = PromptTemplate(
             template=template,
             input_variables=["context_prompt", "tags_str"]
