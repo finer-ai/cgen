@@ -160,12 +160,7 @@ class BodylineService:
             binary_image = self.binarize_image(image)
             # 二値化した画像をRGBA画像に変換
             rgba_image = self.create_rgba_image(binary_image, [0, 0, 0])
-            
-            # 生成された画像をBase64に変換
-            buffered = io.BytesIO()
-            rgba_image.save(buffered, format="PNG")
-            image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
-            images.append(image_base64)
+            images.append(rgba_image)
             
         
         return {

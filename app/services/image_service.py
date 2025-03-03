@@ -78,12 +78,8 @@ class ImageService:
             
                 # 画像の取得
                 image = result.images[0]
-                
-                # Base64エンコード
-                buffered = io.BytesIO()
-                image.save(buffered, format="PNG")
-                image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
-                images.append(image_base64)
+                images.append(image)
+
             # 結果を返却
             return {
                 "images": images,
