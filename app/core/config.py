@@ -51,4 +51,33 @@ class Settings(BaseSettings):
     DEVICE: str = "cuda"
     TORCH_DTYPE: str = "float16"
 
+    # モデルのパスとURL設定
+    MODEL_DIR = f"{root_path}/models"
+    MODEL_CONFIGS = [
+        {
+            "name": "animagine-xl-4.0",
+            "path": f"{MODEL_DIR}/animagine-xl-4.0.safetensors",
+            "url": "https://huggingface.co/cagliostrolab/animagine-xl-4.0/resolve/main/animagine-xl-4.0.safetensors",
+            "requires_auth": False
+        },
+        {
+            "name": "sotai-lora",
+            "path": f"{MODEL_DIR}/LoRAMergeModel_animepose_outline_sotai.fp16.safetensors",
+            "url": "https://huggingface.co/yeq6x/webui-models/resolve/main/Stable-diffusion/LoRAMergeModel_animepose_outline_sotai.fp16.safetensors",
+            "requires_auth": True
+        },
+        {
+            "name": "sotai-sketch-controlnet",
+            "path": f"{MODEL_DIR}/Sotai_sketch_ControlNet_epoch=0288_train_loss_epoch=9.7849e-03.ckpt",
+            "url": "https://huggingface.co/yeq6x/webui-models/resolve/main/ControlNet/Sotai_sketch_ControlNet_epoch%3D0288_train_loss_epoch%3D9.7849e-03.ckpt",
+            "requires_auth": True
+        },
+        {
+            "name": "sotai-1k-controlnet",
+            "path": f"{MODEL_DIR}/Sotai_1K_ControlNet-epoch=989.ckpt",
+            "url": "https://huggingface.co/yeq6x/webui-models/resolve/main/ControlNet/Sotai_1K_ControlNet-epoch%3D989.ckpt",
+            "requires_auth": True
+        }
+    ]
+
 settings = Settings() 

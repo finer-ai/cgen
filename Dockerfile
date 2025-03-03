@@ -1,5 +1,9 @@
 FROM nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
 
+# Hugging Face トークンの設定
+ARG HF_TOKEN
+ENV HF_TOKEN=${HF_TOKEN}
+
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 
@@ -28,11 +32,9 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 RUN pip install torch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 --index-url https://download.pytorch.org/whl/cu121
 RUN pip install runpod
 
-
 # アプリケーションファイルのコピー
 COPY ./app /app/
 COPY ./models /app/models
-RUN wget https://huggingface.co/cagliostrolab/animagine-xl-4.0/resolve/main/animagine-xl-4.0.safetensors -O /app/models/animagine-xl-4.0.safetensors
 
 # 起動コマンド
 CMD ["python3", "-u", "handler.py"]

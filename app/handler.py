@@ -8,6 +8,17 @@ from services.bodyline_service import BodylineService
 from core.errors import RAGError, DartError, ImageGenerationError
 from PIL import Image
 import io
+from utils.model_downloader import ensure_models_downloaded
+import logging
+
+# ロガーの設定
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# 必要なモデルファイルのダウンロード
+logger.info("Checking and downloading required models...")
+ensure_models_downloaded()
+logger.info("Model initialization completed")
 
 # サービスのインスタンス化
 rag_service = RAGService()
