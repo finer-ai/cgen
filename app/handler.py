@@ -31,6 +31,10 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
     try:
         # 入力データの取得
         input_data = event["input"]
+        tag_candidate_generation_template = input_data.get("tag_candidate_generation_template", None)
+        tag_normalization_template = input_data.get("tag_normalization_template", None)
+        tag_filter_prompt = input_data.get("tag_filter_prompt", None)
+        tag_weight_prompt = input_data.get("tag_weight_prompt", None)
         prompt = input_data.get("prompt")
         negative_prompt = input_data.get("negative_prompt", "")
         steps = input_data.get("steps", 30)
@@ -38,14 +42,23 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         width = input_data.get("width", 512)
         height = input_data.get("height", 768)
         num_images = input_data.get("num_images", 1)
-        
-        # バリデーション
-        if not prompt:
-            return {
-                "error": "No prompt provided"
-            }
+        bodyline_prompt = input_data.get("bodyline_prompt", "anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)")
+        bodyline_negative_prompt = input_data.get("bodyline_negative_prompt", "(wings:1.6), (clothes:1.4), (garment:1.4), (lighting:1.4), (gray:1.4), (missing limb:1.4), (extra line:1.4), (extra limb:1.4), (extra arm:1.4), (extra legs:1.4), (hair:1.4), (bangs:1.4), (fringe:1.4), (forelock:1.4), (front hair:1.4), (fill:1.4), (ink pool:1.6)")
 
         try:
+            if tag_candidate_generation_template:
+                rag_service.set_tag_candidate_generation_template(tag_candidate_generation_template)
+                print("tag_candidate_generation_template registered")
+            if tag_normalization_template:
+                rag_service.set_tag_normalization_template(tag_normalization_template)
+                print("tag_normalization_template registered")
+            if tag_filter_prompt:
+                dart_service.set_filter_prompt(tag_filter_prompt)
+                print("tag_filter_prompt registered")
+            if tag_weight_prompt:
+                dart_service.set_weight_prompt(tag_weight_prompt)
+                print("tag_weight_prompt registered")
+
             if prompt.startswith("prompt:"):
                 joined_tags = [tag.strip() for tag in prompt.split("prompt:")[1].split(",")] + ["masterpiece", "high score", "great score", "absurdres"]
             else:
@@ -81,8 +94,8 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
             output_size = bodyline_service.calculate_resize_dimensions(image_result["images"][0], 786)
             bodyline_result = await bodyline_service.generate_bodyline(
                 control_images=image_result["images"],
-                prompt="anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)",
-                negative_prompt="(wings:1.6), (clothes:1.4), (garment:1.4), (lighting:1.4), (gray:1.4), (missing limb:1.4), (extra line:1.4), (extra limb:1.4), (extra arm:1.4), (extra legs:1.4), (hair:1.4), (bangs:1.4), (fringe:1.4), (forelock:1.4), (front hair:1.4), (fill:1.4), (ink pool:1.6)",
+                prompt=bodyline_prompt,
+                negative_prompt=bodyline_negative_prompt,
                 num_inference_steps=20,
                 guidance_scale=8,
                 input_resolution=256,

@@ -24,7 +24,7 @@ class BodylineService:
         for config in settings.CONTROLNET_CONFIGS:
             controlnet = ControlNetModel.from_single_file(
                 config["path"],
-                torch_dtype=getattr(torch, settings.TORCH_DTYPE)
+            torch_dtype=getattr(torch, settings.TORCH_DTYPE)
             ).to(settings.DEVICE)
             self.controlnet_models.append(controlnet)
             self.controlnet_scales.append(config["conditioning_scale"])
@@ -139,10 +139,10 @@ class BodylineService:
         images = []
         for control_image in resized_images:
             result = self.pipeline(
-                prompt=prompt,
-                negative_prompt=negative_prompt,
+            prompt=prompt,
+            negative_prompt=negative_prompt,
                 image=[control_image] * len(self.controlnet_models),  # 各ControlNetモデル用に同じ画像を複製
-                num_inference_steps=num_inference_steps,
+            num_inference_steps=num_inference_steps,
                 guidance_scale=guidance_scale,
                 width=output_size[0],
                 height=output_size[1],

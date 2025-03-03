@@ -1,6 +1,6 @@
 import os
 from pydantic_settings import BaseSettings
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, ClassVar
 from pydantic import ConfigDict
 
 class Settings(BaseSettings):
@@ -52,8 +52,8 @@ class Settings(BaseSettings):
     TORCH_DTYPE: str = "float16"
 
     # モデルのパスとURL設定
-    MODEL_DIR = f"{root_path}/models"
-    MODEL_CONFIGS = [
+    MODEL_DIR: ClassVar[str] = f"{root_path}/models"
+    MODEL_CONFIGS: List[Dict[str, Any]] = [
         {
             "name": "animagine-xl-4.0",
             "path": f"{MODEL_DIR}/animagine-xl-4.0.safetensors",

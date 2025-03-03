@@ -41,12 +41,11 @@ class RAGService:
         
         # LLMの設定
         self.llm = load_llm(use_local_llm=use_local_llm)
-        
-        # キーワード（＝タグ候補）抽出用LLMChain（シーン説明からカンマ区切りのタグ候補を生成）
-        self.num_candidates = 20
-        rich_description_template = f"""
+
+        # タグ候補生成用LLMChain：シーン説明からカンマ区切りのタグ候補を生成
+        self.set_tag_candidate_generation_template("""
 Generate Danbooru tags from the prompt. The prompt may either be a question or instruction requesting a scene to be drawn, or a direct description of the desired scene without a question.
-First, extract the scene. Then, generate up to {self.num_candidates} Danbooru tags, separated by commas, detailing all relevant aspects including character count, group tags, and other necessary details.
+First, extract the scene. Then, generate up to 20 Danbooru tags, separated by commas, detailing all relevant aspects including character count, group tags, and other necessary details.
 
 Important character count rules:
 - Unless explicitly specified otherwise in the prompt, assume there is only one character.
@@ -59,20 +58,12 @@ Additional rules:
 - If there is a single non-humanoid character, use 'solo' along with '1other'.
 - If applicable, combine species tags (e.g., 'orc', 'elf') with character count tags.
 
-Prompt: {{prompt}}
-Tags (up to {self.num_candidates}):
-"""
+Prompt: {prompt}
+Tags (up to 20):
+""")
 
-        self.rich_description_prompt = PromptTemplate(
-            template=rich_description_template,
-            input_variables=["prompt"]
-        )
-        self.rich_description_chain = RunnableSequence(
-            self.rich_description_prompt | self.llm | StrOutputParser()
-        )
-        
         # タグ補正用LLMChain：retrieverで取得した文脈を元に、入力タグの正確なマッチを行う
-        tag_response_template = """
+        self.set_tag_normalization_template("""
 You are a Danbooru tag matcher. Find exact matches in the context for the input.
 Rules:
 1. Return only exact matches from the context.
@@ -95,19 +86,30 @@ Rules:
 Context: {context}
 Input: {query}
 Output:
-"""
-        self.tag_response_prompt = PromptTemplate(
-            template=tag_response_template,
+""")
+
+    def set_tag_candidate_generation_template(self, template: str):
+        self.tag_candidate_generation_prompt = PromptTemplate(
+            template=template,
+            input_variables=["prompt"]
+        )
+        self.tag_candidate_generation_chain = RunnableSequence(
+            self.tag_candidate_generation_prompt | self.llm | StrOutputParser()
+        )
+
+    def set_tag_normalization_template(self, template: str):
+        self.tag_normalization_prompt = PromptTemplate(
+            template=template,
             input_variables=["context", "query"]
         )
-        self.tag_response_chain = self.tag_response_prompt | self.llm.bind(stop=["\n"])
+        self.tag_normalization_chain = self.tag_normalization_prompt | self.llm.bind(stop=["\n"])
         
     async def extract_elements(self, query: str) -> list:
         """
         シーン説明からDanbooruタグ候補（キーワード）を抽出する。
         出力はカンマ区切りの文字列を分割してList[str]に変換。
         """
-        result = await self.rich_description_chain.ainvoke({"prompt": query})
+        result = await self.tag_candidate_generation_chain.ainvoke({"prompt": query})
         # カンマで分割し、前後の空白を除去
         elements = [word.strip() for word in result.split(",") if word.strip()]
         return elements
@@ -115,7 +117,7 @@ Output:
     async def retrieve_tags(self, elements: list) -> list:
         """
         キーワードごとにretrieverから関連文脈を取得し、
-        tag_response_chainで各キーワードの正確なタグを補正する。
+        tag_normalization_chainで各キーワードの正確なタグを補正する。
         """
         refined_tags = []
         seen = set()
@@ -127,7 +129,7 @@ Output:
             context.reverse() # 最後の要素が重視されがちなので、逆順にする
 
             context_str = ", ".join(context)
-            tag_message = await self.tag_response_chain.ainvoke({"query": element, "context": context_str})
+            tag_message = await self.tag_normalization_chain.ainvoke({"query": element, "context": context_str})
             tag = tag_message.content if hasattr(tag_message, 'content') else str(tag_message)
             
             # Remove ** from the tag and remove square brackets

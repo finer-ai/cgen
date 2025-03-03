@@ -34,7 +34,7 @@ class DartService:
         self.llm = load_llm(use_local_llm=use_local_llm)
         
         # タグフィルタリング用のプロンプトテンプレート
-        filter_template = """
+        self.set_tag_filter_prompt("""
 From the tag list below, please remove tags that significantly deviate from the given context,
 and keep only the tags that are relevant.
 Please output the filtered tags as a comma-separated list.
@@ -51,10 +51,10 @@ Context: {context_prompt}
 
 Tag List: {tags_str}
 
-Output:"""
+Output:""")
 
         # タグの重み付け用のプロンプトテンプレート
-        weight_template = """
+        self.set_weight_prompt("""
 Please analyze the context and add weights ONLY when there are explicit or strongly implied modifiers in the context.
 Be aggressive in applying weights when modifiers are present, but DO NOT add weights when there are no modifiers.
 
@@ -130,26 +130,24 @@ Context: {context_prompt}
 
 Tags: {tags_str}
 
-Output:"""
+Output:""")
 
-        self.filter_prompt = PromptTemplate(
-            template=filter_template,
+    def set_tag_filter_prompt(self, template: str):
+        self.tag_filter_prompt = PromptTemplate(
+            template=template,
             input_variables=["context_prompt", "tags_str"]
         )
+        self.tag_filter_chain = RunnableSequence(
+            self.tag_filter_prompt | self.llm | StrOutputParser()
+        )
 
-        self.weight_prompt = PromptTemplate(
-            template=weight_template,
+    def set_tag_weight_prompt(self, template: str):
+        self.tag_weight_prompt = PromptTemplate(
+            template=template,
             input_variables=["context_prompt", "tags_str"]
         )
-        
-        # フィルタリングチェーン
-        self.filter_chain = RunnableSequence(
-            self.filter_prompt | self.llm | StrOutputParser()
-        )
-
-        # 重み付けチェーン
-        self.weight_chain = RunnableSequence(
-            self.weight_prompt | self.llm | StrOutputParser()
+        self.tag_weight_chain = RunnableSequence(
+            self.tag_weight_prompt | self.llm | StrOutputParser()
         )
     
     def _format_input_for_dart(self, tag_candidates: List[str]) -> str:
@@ -216,7 +214,7 @@ Output:"""
             List[str]: フィルタリングと重み付けが適用されたタグリスト
         """
         # Step 1: フィルタリング - コンテキストに関連のないタグを除去
-        filtered_result = await self.filter_chain.ainvoke({
+        filtered_result = await self.tag_filter_chain.ainvoke({
             "context_prompt": context_prompt,
             "tags_str": tags_str
         })
@@ -224,7 +222,7 @@ Output:"""
         # フィルタリング結果をトリムしてリスト化
         filtered_tags = [tag.replace('_', ' ').strip() for tag in filtered_result.split(",") if tag.strip()]
         # Step 2: 重み付け - フィルタリングされたタグに対して重みを適用
-        weighted_result = await self.weight_chain.ainvoke({
+        weighted_result = await self.tag_weight_chain.ainvoke({
             "context_prompt": context_prompt,
             "tags_str": ", ".join(filtered_tags)
         })
