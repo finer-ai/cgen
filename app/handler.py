@@ -10,6 +10,8 @@ from PIL import Image
 import io
 from utils.model_downloader import ensure_models_downloaded
 import logging
+import os
+from datetime import datetime
 
 # ロガーの設定
 logging.basicConfig(level=logging.INFO)
@@ -31,11 +33,12 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
     try:
         # 入力データの取得
         input_data = event["input"]
+        # パラメータの取得
+        prompt = input_data.get("prompt")
         tag_candidate_generation_template = input_data.get("tag_candidate_generation_template", None)
         tag_normalization_template = input_data.get("tag_normalization_template", None)
-        tag_filter_prompt = input_data.get("tag_filter_prompt", None)
-        tag_weight_prompt = input_data.get("tag_weight_prompt", None)
-        prompt = input_data.get("prompt")
+        tag_filter_template = input_data.get("tag_filter_template", None)
+        tag_weight_template = input_data.get("tag_weight_template", None)
         negative_prompt = input_data.get("negative_prompt", "")
         steps = input_data.get("steps", 30)
         cfg_scale = input_data.get("cfg_scale", 7.0)
@@ -52,12 +55,12 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
             if tag_normalization_template:
                 rag_service.set_tag_normalization_template(tag_normalization_template)
                 print("tag_normalization_template registered")
-            if tag_filter_prompt:
-                dart_service.set_filter_prompt(tag_filter_prompt)
-                print("tag_filter_prompt registered")
-            if tag_weight_prompt:
-                dart_service.set_weight_prompt(tag_weight_prompt)
-                print("tag_weight_prompt registered")
+            if tag_filter_template:
+                dart_service.set_tag_filter_template(tag_filter_template)
+                print("tag_filter_template registered")
+            if tag_weight_template:
+                dart_service.set_tag_weight_template(tag_weight_template)
+                print("tag_weight_template registered")
 
             if prompt.startswith("prompt:"):
                 joined_tags = [tag.strip() for tag in prompt.split("prompt:")[1].split(",")] + ["masterpiece", "high score", "great score", "absurdres"]
@@ -115,7 +118,7 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
                 buffered = io.BytesIO()
                 image.save(buffered, format="PNG")
                 image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
-                image_base64s.append(image_base64)
+                bodyline_base64s.append(image_base64)
 
             return {
                 "images": image_base64s,
@@ -133,8 +136,14 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         return {"error": f"Unexpected error: {str(e)}"}
 
-import asyncio
 async def test():
+    # タイムスタンプ付きのディレクトリ名を作成
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_dir = f"output/{timestamp}"
+    
+    # ディレクトリが存在しない場合は作成
+    os.makedirs(output_dir, exist_ok=True)
+
     test_data = {
         "input": {
             # "prompt": "prompt:original, 1girl, solo, (jumping:1.3), jacket, school uniform, pose, miniskirt, brown hair, blue eyes, pleated skirt, red footwear, red jacket, shoes, striped clothes, thighs, white thighhighs",
@@ -153,13 +162,13 @@ async def test():
     # 画像を保存
     for i, image in enumerate(result["images"]):
         image_data = base64.b64decode(image)
-        with open(f"test_image_{i}.png", "wb") as f:
+        with open(f"{output_dir}/image_{i}.png", "wb") as f:
             f.write(image_data)
                 
     # ボディラインを保存
     for i, image in enumerate(result["bodylines"]):
         image_data = base64.b64decode(image)
-        with open(f"test_bodyline_{i}.png", "wb") as f:
+        with open(f"{output_dir}/bodyline_{i}.png", "wb") as f:
             f.write(image_data)
             
 if __name__ == "__main__":

@@ -59,8 +59,7 @@ Additional rules:
 - If applicable, combine species tags (e.g., 'orc', 'elf') with character count tags.
 
 Prompt: {prompt}
-Tags (up to 20):
-""")
+Tags (up to 20):""")
 
         # タグ補正用LLMChain：retrieverで取得した文脈を元に、入力タグの正確なマッチを行う
         self.set_tag_normalization_template("""
@@ -85,8 +84,7 @@ Rules:
 
 Context: {context}
 Input: {query}
-Output:
-""")
+Output:""")
 
     def set_tag_candidate_generation_template(self, template: str):
         self.tag_candidate_generation_prompt = PromptTemplate(
