@@ -8,6 +8,7 @@ import io
 from datetime import datetime
 import time
 import dotenv
+from pathlib import Path
 from templates import (
     TAG_CANDIDATE_GENERATION_TEMPLATE,
     TAG_NORMALIZATION_TEMPLATE,
@@ -16,6 +17,23 @@ from templates import (
 )
 
 dotenv.load_dotenv()
+
+def save_images(images: list, output_dir: Path, prefix: str = "generated", subfolder: str = None):
+    """Base64エンコードされた画像リストを保存する"""
+    # タイムスタンプ付きのディレクトリ名を作成
+    output_dir = output_dir / subfolder
+    output_dir.mkdir(parents=True, exist_ok=True)
+    saved_paths = []
+    
+    for i, img_base64 in enumerate(images):
+        img_data = base64.b64decode(img_base64)
+        output_path = output_dir / f"{prefix}_{i}.png"
+        
+        with open(output_path, "wb") as f:
+            f.write(img_data)
+        saved_paths.append(output_path)
+    
+    return saved_paths
 
 # RunPod APIを呼び出す関数
 def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=None, 
@@ -70,7 +88,7 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
             "negative_prompt": negative_prompt,
             "num_images": num_images,
             "steps": num_inference_steps,
-            "cfg_scale": guidance_scale,
+            "guidance_scale": guidance_scale,
             "width": width,
             "height": height,
             "seed": seed if seed != -1 else int(time.time())
@@ -110,8 +128,40 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
         output = result.get("output", {})
         images = [None]*4
         
-        # base64エンコードされた画像をデコードしてPIL Imageに変換
+        # 画像の保存処理
         if "images" in output:
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            output_dir = Path("output")
+            
+            # 生成画像の保存
+            save_images(
+                output["images"],
+                output_dir,
+                prefix="generated",
+                subfolder=timestamp
+            )
+            
+            # ボディラインの保存
+            save_images(
+                output["bodylines"],
+                output_dir,
+                prefix="bodyline",
+                subfolder=timestamp
+            )
+            
+            # メタデータの保存
+            metadata = {
+                "generated_tags": output.get("generated_tags", []),
+                "parameters": output.get("parameters", {})
+            }
+            
+            metadata_path = output_dir / timestamp / "metadata.json"
+            with open(metadata_path, "w", encoding="utf-8") as f:
+                json.dump(metadata, f, ensure_ascii=False, indent=2)
+            
+            print(f"Images and metadata saved to: {output_dir / timestamp}")
+            
+            # Gradio用の画像変換
             for i, (img_b64, bodyline_b64) in enumerate(zip(output["images"], output["bodylines"])):
                 img_data = base64.b64decode(img_b64.split(",")[1] if "," in img_b64 else img_b64)
                 img = Image.open(io.BytesIO(img_data))
@@ -147,8 +197,8 @@ def create_ui():
                 seed = gr.Number(value=-1, label="シード値 (-1でランダム)")
             
             with gr.Row():
-                width = gr.Slider(minimum=256, maximum=1024, value=832, step=64, label="幅")
-                height = gr.Slider(minimum=256, maximum=1024, value=1216, step=64, label="高さ")
+                width = gr.Slider(minimum=512, maximum=2048, value=832, step=64, label="幅")
+                height = gr.Slider(minimum=512, maximum=2048, value=1216, step=64, label="高さ")
                 num_images = gr.Slider(minimum=1, maximum=4, value=4, step=1, label="生成枚数")
             
             with gr.Accordion("タグテンプレート設定", open=False):

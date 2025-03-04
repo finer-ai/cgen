@@ -41,7 +41,7 @@ def test_generate_image(tags):
         json={
             "tags": tags,
             "steps": 20,
-            "cfg_scale": 7.0,
+            "guidance_scale": 7.0,
             "width": 512,
             "height": 768
         }

@@ -36,7 +36,7 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         tag_weight_template = input_data.get("tag_weight_template", None)
         negative_prompt = input_data.get("negative_prompt", "")
         steps = input_data.get("steps", 30)
-        cfg_scale = input_data.get("cfg_scale", 7.0)
+        guidance_scale = input_data.get("guidance_scale", 7.0)
         width = input_data.get("width", 512)
         height = input_data.get("height", 768)
         num_images = input_data.get("num_images", 1)
@@ -81,7 +81,7 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
             image_result = await image_service.generate_image(
                 tags=joined_tags,
                 steps=steps,
-                cfg_scale=cfg_scale,
+                guidance_scale=guidance_scale,
                 width=width,
                 height=height,
                 negative_prompt=negative_prompt,
@@ -146,7 +146,7 @@ async def test():
             "negative_prompt": "nsfw, sensitive, from behind, lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, missing arms, extra arms, missing legs, extra legs, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry",
             "num_images": 2,
             "steps": 30,
-            "cfg_scale": 10.0,
+            "guidance_scale": 10.0,
             "width": 832,
             "height": 1216
         }

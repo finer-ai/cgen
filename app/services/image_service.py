@@ -1,14 +1,16 @@
 from typing import Dict, Any, Optional
-import os
-import uuid
-import base64
-import io
-from PIL import Image
 import torch
-from diffusers import StableDiffusionXLPipeline, DPMSolverMultistepScheduler
-
+from diffusers.models import AutoencoderKL
 from core.config import settings
 from core.errors import ImageGenerationError
+import utils.sd_utils
+
+# PyTorch settings for better performance and determinism
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+torch.backends.cuda.matmul.allow_tf32 = True
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ImageService:
     """画像生成サービス"""
@@ -17,16 +19,20 @@ class ImageService:
         # """初期化"""
         # try:
             # Stable Diffusion XL モデルのロード
-            self.pipe = StableDiffusionXLPipeline.from_single_file(
-                settings.SD_MODEL_PATH,
-                use_safetensors=True,
+            vae = AutoencoderKL.from_pretrained(
+                "madebyollin/sdxl-vae-fp16-fix",
                 torch_dtype=torch.float16,
-                variant="fp16"
             )
+            self.pipe = utils.sd_utils.load_pipeline(settings.SD_MODEL_PATH, device, vae=vae)
+            
+            # # シード値設定
+            # seed = 42
+            # generator = utils.sd_utils.seed_everything(seed)
             
             # スケジューラー設定
-            self.pipe.scheduler = DPMSolverMultistepScheduler.from_config(
-                self.pipe.scheduler.config
+            self.pipe.scheduler = utils.sd_utils.get_scheduler(
+                self.pipe.scheduler.config,
+                "Euler a"
             )
             
             # GPUに移動
@@ -45,7 +51,7 @@ class ImageService:
         self,
         tags: list[str],
         steps: Optional[int] = None,
-        cfg_scale: Optional[float] = None,
+        guidance_scale: Optional[float] = None,
         width: Optional[int] = None,
         height: Optional[int] = None,
         negative_prompt: Optional[str] = None,
@@ -55,7 +61,7 @@ class ImageService:
         try:
             # パラメータのデフォルト値設定
             steps = steps or 20
-            cfg_scale = cfg_scale or 7.0
+            guidance_scale = guidance_scale or 7.0
             width = width or 512
             height = height or 768
             negative_prompt = negative_prompt or "lowres, bad anatomy, bad hands, cropped, worst quality"
@@ -71,7 +77,7 @@ class ImageService:
                         prompt=prompt,
                         negative_prompt=negative_prompt,
                         num_inference_steps=steps,
-                        guidance_scale=cfg_scale,
+                        guidance_scale=guidance_scale,
                         width=width,
                         height=height,
                     )
@@ -88,7 +94,7 @@ class ImageService:
                     "prompt": prompt,
                     "negative_prompt": negative_prompt,
                     "steps": steps,
-                    "cfg_scale": cfg_scale,
+                    "guidance_scale": guidance_scale,
                     "width": width,
                     "height": height,
                     "num_images": num_images

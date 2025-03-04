@@ -47,7 +47,7 @@ def call_runpod_endpoint(prompt: str, endpoint_id: str, api_key: str, **kwargs):
             'negative_prompt': kwargs.get('negative_prompt', ''),
             'num_images': kwargs.get('num_images', 1),
             'steps': kwargs.get('steps', 30),
-            'cfg_scale': kwargs.get('cfg_scale', 7.0),
+            'guidance_scale': kwargs.get('guidance_scale', 7.0),
             'width': kwargs.get('width', 512),
             'height': kwargs.get('height', 768)
         }
@@ -141,7 +141,7 @@ def main():
     negative_prompt = args.negative_prompt or "nsfw, sensitive, from behind, lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, missing arms, extra arms, missing legs, extra legs, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry"
     num_images = args.num_images or 4
     steps = args.steps or 30
-    cfg_scale = args.cfg_scale or 10.0
+    guidance_scale = args.guidance_scale or 10.0
     width = args.width or 832
     height = args.height or 1216
 
@@ -161,7 +161,7 @@ def main():
         negative_prompt=negative_prompt,
         num_images=num_images,
         steps=steps,
-        cfg_scale=cfg_scale,
+        guidance_scale=guidance_scale,
         width=width,
         height=height
     )

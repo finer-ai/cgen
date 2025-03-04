@@ -85,7 +85,7 @@ def test_individual_api():
         image_data = {
             "tags": response.get("tags", []),
             "steps": 20,
-            "cfg_scale": 7.5,
+            "guidance_scale": 7.5,
             "width": 512,
             "height": 512,
             "negative_prompt": "lowres, bad anatomy, bad hands, cropped, worst quality"
@@ -115,7 +115,7 @@ def test_all_apis():
     data = {
         "prompt": prompt,
         "steps": 20,
-        "cfg_scale": 7.5,
+        "guidance_scale": 7.5,
         "width": 512,
         "height": 512,
         "negative_prompt": "lowres, bad anatomy, bad hands, cropped, worst quality",
