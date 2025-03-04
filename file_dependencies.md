@@ -8,28 +8,20 @@
 
 ```mermaid
 graph TB
-    %% アプリケーションのメインファイル
-    main[app/main.py] --> routes[app/api/routes.py]
-    main --> config[app/core/config.py]
-    main --> errors[app/core/errors.py]
-    
-    %% APIルート
-    routes --> schemas[app/api/schemas.py]
-    routes --> rag_service[app/services/rag_service.py]
-    routes --> dart_service[app/services/dart_service.py]
-    routes --> image_service[app/services/image_service.py]
-    routes --> errors
+    %% Gradioインターフェース
+    gradio[scripts/gradio_runpod_interface.py] --> config[app/core/config.py]
+    gradio --> errors[app/core/errors.py]
     
     %% サービス
-    rag_service --> config
+    rag_service[app/services/rag_service.py] --> config
     rag_service --> errors
     rag_service --> tag_utils[app/utils/tag_utils.py]
     
-    dart_service --> config
+    dart_service[app/services/dart_service.py] --> config
     dart_service --> errors
     dart_service --> tag_utils
     
-    image_service --> config
+    image_service[app/services/image_service.py] --> config
     image_service --> errors
     
     %% データストア
@@ -46,11 +38,9 @@ graph TB
     download_dataset[scripts/download_dataset.py]
     download_models[scripts/download_models.sh]
     prepare_vector_store[scripts/prepare_vector_store.py] --> faiss
-    test_api[scripts/test_api.py] -.-> routes
-    call_py[scripts/call.py] -.-> routes
     
     %% クラスハイライト
-    class main,routes,config,schemas focus
+    class gradio,config focus
     class rag_service,dart_service,image_service emphasis
 ```
 
@@ -60,10 +50,8 @@ graph TB
 
 ```mermaid
 graph TB
-    subgraph "APIレイヤー"
-        main[app/main.py]
-        routes[app/api/routes.py]
-        schemas[app/api/schemas.py]
+    subgraph "インターフェースレイヤー"
+        gradio[scripts/gradio_runpod_interface.py]
     end
     
     subgraph "サービスレイヤー"
@@ -86,14 +74,8 @@ graph TB
     end
     
     %% レイヤー間の依存関係
-    main --> routes
-    main --> config
-    main --> errors
-    
-    routes --> schemas
-    routes --> rag_service
-    routes --> dart_service
-    routes --> image_service
+    gradio --> config
+    gradio --> errors
     
     rag_service --> config
     rag_service --> errors
@@ -119,26 +101,14 @@ graph TB
 ```mermaid
 flowchart TD
     %% ユーザーからのリクエストの流れ
-    user[ユーザー] --> main[app/main.py]
-    main --> routes[app/api/routes.py]
+    user[ユーザー] --> gradio[scripts/gradio_runpod_interface.py]
     
-    %% タグ生成フロー
-    routes --> rag_service[app/services/rag_service.py]
-    rag_service --> faiss[app/data/faiss]
-    rag_service --> tag_utils[app/utils/tag_utils.py]
-    
-    routes --> dart_service[app/services/dart_service.py]
-    dart_service --> dart_model[app/models/dart]
-    dart_service --> tag_utils
-    
-    %% 画像生成フロー
-    routes --> image_service[app/services/image_service.py]
-    image_service --> sd_model[app/models/animagine]
+    %% RunPod APIとの通信
+    gradio --> runpod[RunPod API]
+    runpod --> gradio
     
     %% レスポンスの流れ
-    image_service --> routes
-    routes --> main
-    main --> user
+    gradio --> user
 ```
 
 ## サービスコンポーネントの内部依存関係
@@ -205,7 +175,7 @@ graph TB
 
 - 上記の図はファイル間の主要な依存関係を示しています。実際のコードベースでは、ここに示されていない副次的な依存関係が存在する場合があります。
 - モジュールレベルではなく、関数やクラスレベルの詳細な依存関係は含まれていません。
-- 外部ライブラリへの依存関係は、簡潔さのために図には含まれていません。
+- 外部ライブラリ（Gradio、RunPod API等）への依存関係は、簡潔さのために図には含まれていません。
 
 ## 依存関係分析の活用方法
 

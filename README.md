@@ -16,9 +16,10 @@
    - Stable Diffusion系モデル（Animagineなど）を使用
    - 生成されたタグセットを元に高品質なアニメ画像を生成
 
-4. **Web API**：
-   - FastAPIベースのRESTful API
-   - タグ生成と画像生成の各ステップを独立して呼び出せる設計
+4. **Gradioインターフェース**：
+   - 直感的なWebインターフェース
+   - タグ生成と画像生成の統合された操作環境
+   - 詳細なパラメータ調整機能
 
 ## 2. システムアーキテクチャ
 
@@ -68,8 +69,7 @@
 │   ├── download_dataset.py # データセットダウンロード
 │   ├── download_models.sh  # モデルダウンロード
 │   ├── prepare_vector_store.py # ベクトルストア作成
-│   ├── test_api.py         # APIテスト
-│   └── call.py            # APIコールテスト用汎用スクリプト
+│   └── gradio_runpod_interface.py # Gradioインターフェース
 ├── data/                   # データディレクトリ
 │   └── danbooru-wiki-2024_df.pkl # Danbooruタグデータセット
 ├── app/models/             # モデルファイル
@@ -131,12 +131,21 @@
 - Stable Diffusion (Animagine)
 - PyTorch
 
-### 4.4 API (routes.py)
+### 4.4 Gradioインターフェース (gradio_runpod_interface.py)
 
-**エンドポイント**：
-- `POST /api/generate-tags`: タグ生成
-- `POST /api/generate-image`: 画像生成
-- `POST /api/generate-from-prompt`: プロンプトから直接画像生成（統合エンドポイント）
+**役割**：
+- ユーザーフレンドリーなWebインターフェースの提供
+- タグ生成と画像生成の統合された操作環境
+- 詳細なパラメータ調整機能の提供
+
+**主要機能**：
+- `create_ui`: Gradioインターフェースの構築
+- `call_runpod`: RunPod APIとの通信処理
+
+**使用技術**：
+- Gradio
+- RunPod API
+- Python Imaging Library (PIL)
 
 ## 5. セットアップ手順
 
@@ -223,44 +232,25 @@ DEFAULT_HEIGHT=768
 
 ## 6. 使用方法
 
-### 6.1 APIの起動
+### 6.1 Gradioインターフェースの起動
 
 ```bash
-cd app
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+cd scripts
+python gradio_runpod_interface.py
 ```
 
-### 6.2 APIの使用例
+### 6.2 インターフェースの使用方法
 
-#### タグ生成
-
-```bash
-curl -X POST "http://localhost:8000/api/generate-tags" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "ベッドの上で横向きに寝そべっている金髪の女の子、水色のパジャマ、白い枕、赤い毛布、窓から月明かりが差し込んでいる"}'
-```
-
-#### 画像生成
-
-```bash
-curl -X POST "http://localhost:8000/api/generate-image" \
-  -H "Content-Type: application/json" \
-  -d '{"tags": ["1girl", "blonde_hair", "lying", "on_side", "bed", "light_blue_pajamas", "white_pillow", "red_blanket", "moonlight", "window"]}'
-```
-
-#### プロンプトから直接画像生成
-
-```bash
-curl -X POST "http://localhost:8000/api/generate-from-prompt" \
-  -H "Content-Type: application/json" \
-  -d '{"prompt": "窓際に立っている黒髪の男性、スーツを着ている、夕日の光が差し込んでいる"}'
-```
-
-### 6.3 テストスクリプトの実行
-
-```bash
-python scripts/test_api.py
-```
+1. Webブラウザで`http://localhost:7860`にアクセス
+2. プロンプト入力欄に生成したい画像の説明を入力
+3. 必要に応じて詳細設定を調整
+   - CFGスケール
+   - ステップ数
+   - 画像サイズ
+   - 生成枚数
+   - ネガティブプロンプト
+4. 「生成開始」ボタンをクリック
+5. 生成結果が表示されるまで待機
 
 ## 7. 拡張方法
 

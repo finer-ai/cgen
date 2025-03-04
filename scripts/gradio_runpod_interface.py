@@ -119,9 +119,7 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
                 bodyline = Image.open(io.BytesIO(bodyline_data))
                 images[i] = [img, bodyline]
 
-        parameters = output["parameters"]
-
-        return *images, f"生成した画像の枚数: {len(images)}枚"
+        return *images, json.dumps(output["parameters"], indent=2, ensure_ascii=False)
 
     except Exception as e:
         return None, f"エラーが発生しました: {str(e)}"
@@ -129,7 +127,7 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
 # Gradio UIの構築
 def create_ui():
     with gr.Blocks() as app:
-        gr.Markdown("# RunPod 画像生成インターフェース")
+        gr.Markdown("# Image Generation Interface")
         
         with gr.Row():
             prompt = gr.Textbox(label="生成プロンプト", placeholder="画像生成のためのプロンプトを入力してください...", lines=3)
