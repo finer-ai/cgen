@@ -35,7 +35,7 @@ RUN pip3 install --no-cache-dir -r requirements.txt && \
 # アプリケーションコードのコピー
 COPY ./app /app/
 
-# モデルダウンロードとキャッシュの設定
+# モデルダウンロード
 RUN python3 /app/model_downloader.py
 
 # 起動コマンド

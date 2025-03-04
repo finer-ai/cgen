@@ -4,6 +4,9 @@ from diffusers.models import AutoencoderKL
 from core.config import settings
 from core.errors import ImageGenerationError
 import utils.sd_utils
+import gc
+import random
+import numpy as np
 
 # PyTorch settings for better performance and determinism
 torch.backends.cudnn.deterministic = True
@@ -14,38 +17,24 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ImageService:
     """画像生成サービス"""
-    
     def __init__(self):
         # """初期化"""
-        # try:
-            # Stable Diffusion XL モデルのロード
-            vae = AutoencoderKL.from_pretrained(
-                "madebyollin/sdxl-vae-fp16-fix",
-                torch_dtype=torch.float16,
-            )
-            self.pipe = utils.sd_utils.load_pipeline(settings.SD_MODEL_PATH, device, vae=vae)
-            
-            # # シード値設定
-            # seed = 42
-            # generator = utils.sd_utils.seed_everything(seed)
-            
-            # スケジューラー設定
-            self.pipe.scheduler = utils.sd_utils.get_scheduler(
-                self.pipe.scheduler.config,
-                "Euler a"
-            )
-            
-            # GPUに移動
-            self.pipe = self.pipe.to("cuda")
-            
-            # VAEをcache
-            self.pipe.enable_vae_tiling()
-            
-            # メモリ効率化
-            self.pipe.enable_xformers_memory_efficient_attention()
+        self.pipe = utils.sd_utils.load_pipeline(settings.SD_MODEL_PATH, device)
         
-        # except Exception as e:
-        #     raise ImageGenerationError(f"画像生成モデルの読み込みに失敗しました: {str(e)}")
+        # スケジューラー設定
+        self.pipe.scheduler = utils.sd_utils.get_scheduler(
+            self.pipe.scheduler.config,
+            "Euler a"
+        )
+        
+        # GPUに移動
+        self.pipe = self.pipe.to(device)
+        
+        # VAEをcache
+        self.pipe.enable_vae_tiling()
+        
+        # メモリ効率化
+        self.pipe.enable_xformers_memory_efficient_attention()
     
     async def generate_image(
         self,
@@ -56,21 +45,32 @@ class ImageService:
         height: Optional[int] = None,
         negative_prompt: Optional[str] = None,
         num_images: Optional[int] = None,
+        seeds: Optional[list[int]] = None,
     ) -> Dict[str, Any]:
         """タグから画像を生成"""
         try:
+            # Memory management
+            torch.cuda.empty_cache()
+            gc.collect()
+
             # パラメータのデフォルト値設定
             steps = steps or 20
             guidance_scale = guidance_scale or 7.0
             width = width or 512
             height = height or 768
             negative_prompt = negative_prompt or "lowres, bad anatomy, bad hands, cropped, worst quality"
+            num_images = num_images or 1
+            seeds = seeds or None
             
+            if seeds is None:
+                seeds = [random.randint(0, np.iinfo(np.int32).max) for _ in range(num_images)]
+
             # タグをプロンプトに変換
             prompt = ", ".join(tags)
             
             images = []
             for i in range(num_images):
+                generator = utils.sd_utils.seed_everything(seeds[i])
                 # 画像生成
                 with torch.autocast("cuda"):
                     result = self.pipe(
@@ -80,6 +80,7 @@ class ImageService:
                         guidance_scale=guidance_scale,
                         width=width,
                         height=height,
+                        generator=generator,
                     )
             
                 # 画像の取得
@@ -97,7 +98,8 @@ class ImageService:
                     "guidance_scale": guidance_scale,
                     "width": width,
                     "height": height,
-                    "num_images": num_images
+                    "num_images": num_images,
+                    "seeds": seeds
                 }
             }
         

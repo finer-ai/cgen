@@ -40,6 +40,7 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         width = input_data.get("width", 512)
         height = input_data.get("height", 768)
         num_images = input_data.get("num_images", 1)
+        seeds = input_data.get("seeds", None)
         bodyline_prompt = input_data.get("bodyline_prompt", "anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)")
         bodyline_negative_prompt = input_data.get("bodyline_negative_prompt", "(wings:1.6), (clothes:1.4), (garment:1.4), (lighting:1.4), (gray:1.4), (missing limb:1.4), (extra line:1.4), (extra limb:1.4), (extra arm:1.4), (extra legs:1.4), (hair:1.4), (bangs:1.4), (fringe:1.4), (forelock:1.4), (front hair:1.4), (fill:1.4), (ink pool:1.6)")
 
@@ -85,7 +86,8 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
                 width=width,
                 height=height,
                 negative_prompt=negative_prompt,
-                num_images=num_images
+                num_images=num_images,
+                seeds=seeds
             )
             
             # 生成された画像を使ってボディライン生成

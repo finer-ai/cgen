@@ -39,7 +39,7 @@ def save_images(images: list, output_dir: Path, prefix: str = "generated", subfo
 def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=None, 
                 tag_normalization_template=None, tag_filter_template=None, 
                 tag_weight_template=None, guidance_scale=7.0, num_inference_steps=30, 
-                width=512, height=768, num_images=1, seed=-1, api_key="", endpoint_id=""):
+                width=512, height=768, num_images=1, is_random_seeds=True, seeds=None, api_key="", endpoint_id=""):
     """
     RunPod APIを呼び出して画像を生成する関数
     
@@ -55,7 +55,7 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
         width: 画像の幅
         height: 画像の高さ
         num_images: 生成する画像の枚数
-        seed: 乱数シード
+        seeds: 乱数シード
         api_key: RunPod API Key
         endpoint_id: RunPod Endpoint ID
     
@@ -70,6 +70,12 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
     
     if not api_key or not endpoint_id:
         raise ValueError("API KeyまたはEndpoint IDが設定されていません")
+    
+    if is_random_seeds:
+        seeds = None
+    else:
+        seeds = seeds.split(",")
+        seeds = [int(seed) for seed in seeds]
     
     url = f"https://api.runpod.ai/v2/{endpoint_id}/run"
     
@@ -88,10 +94,10 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
             "negative_prompt": negative_prompt,
             "num_images": num_images,
             "steps": num_inference_steps,
-            "guidance_scale": guidance_scale,
+            "cfg_scale": guidance_scale,
             "width": width,
             "height": height,
-            "seed": seed if seed != -1 else int(time.time())
+            "seeds": seeds
         }
     }
     
@@ -117,7 +123,7 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
                 time.sleep(10)
                 status_response = requests.get(status_url, headers=headers)
                 status_data = status_response.json()
-                
+                print(status_data.get("status"))
                 if status_data.get("status") == "COMPLETED":
                     result = status_data
                     break
@@ -126,8 +132,8 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
             raise Exception(f"API処理エラー: {result}")
         
         output = result.get("output", {})
-        images = [None]*4
-        
+        images = [None]*num_images
+
         # 画像の保存処理
         if "images" in output:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
@@ -169,10 +175,10 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
                 bodyline = Image.open(io.BytesIO(bodyline_data))
                 images[i] = [img, bodyline]
 
-        return *images, json.dumps(output["parameters"], indent=2, ensure_ascii=False)
+        return *images, json.dumps(output["parameters"], indent=2, ensure_ascii=False), None #', '.join(output["parameters"]["seeds"])
 
     except Exception as e:
-        return None, f"エラーが発生しました: {str(e)}"
+        return *[None]*4, f"エラーが発生しました: {str(e)}", None
 
 # Gradio UIの構築
 def create_ui():
@@ -194,12 +200,15 @@ def create_ui():
             with gr.Row():
                 guidance_scale = gr.Slider(minimum=1.0, maximum=20.0, value=10.0, step=0.1, label="CFGスケール")
                 num_inference_steps = gr.Slider(minimum=10, maximum=100, value=30, step=1, label="ステップ数")
-                seed = gr.Number(value=-1, label="シード値 (-1でランダム)")
             
             with gr.Row():
                 width = gr.Slider(minimum=512, maximum=2048, value=832, step=64, label="幅")
                 height = gr.Slider(minimum=512, maximum=2048, value=1216, step=64, label="高さ")
                 num_images = gr.Slider(minimum=1, maximum=4, value=4, step=1, label="生成枚数")
+                
+            with gr.Row():
+                is_random_seeds = gr.Checkbox(label="シード値をランダムに生成", value=True)
+                seeds = gr.Textbox(label="シード値 (未入力の場合はランダム)", placeholder="シード値を入力してください。複数の場合はカンマ区切りで入力してください。")
             
             with gr.Accordion("タグテンプレート設定", open=False):
                 tag_candidate_generation_template = gr.Textbox(
@@ -243,9 +252,9 @@ def create_ui():
                 prompt, negative_prompt, tag_candidate_generation_template,
                 tag_normalization_template, tag_filter_template,
                 tag_weight_template, guidance_scale, num_inference_steps,
-                width, height, num_images, seed, api_key, endpoint_id
+                width, height, num_images, is_random_seeds, seeds, api_key, endpoint_id
             ],
-            outputs=[output_gallery[0], output_gallery[1], output_gallery[2], output_gallery[3], status_text]
+            outputs=[output_gallery[0], output_gallery[1], output_gallery[2], output_gallery[3], status_text, seeds]
         )
     
     return app
