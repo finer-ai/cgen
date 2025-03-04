@@ -4,6 +4,7 @@
 /app/models
 /app/data
 /output
+/.gradio
 
 __pycache__
 
