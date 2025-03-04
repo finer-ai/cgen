@@ -26,15 +26,17 @@ RUN apt-get install -y wget
 # 作業ディレクトリの設定
 WORKDIR /app
 
-# 依存関係ファイルのコピーとインストール
+# 依存関係のインストール（キャッシュを活用）
 COPY requirements.txt .
-RUN pip3 install --no-cache-dir -r requirements.txt
-RUN pip install torch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 --index-url https://download.pytorch.org/whl/cu121
-RUN pip install runpod
+RUN pip3 install --no-cache-dir -r requirements.txt && \
+    pip install torch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 --index-url https://download.pytorch.org/whl/cu121 && \
+    pip install runpod
 
-# アプリケーションファイルのコピー
+# アプリケーションコードのコピー
 COPY ./app /app/
-COPY ./models /app/models
+
+# モデルダウンロードとキャッシュの設定
+RUN python3 /app/model_downloader.py
 
 # 起動コマンド
 CMD ["python3", "-u", "handler.py"]
