@@ -37,6 +37,7 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         tag_normalization_template = input_data.get("tag_normalization_template", None)
         tag_filter_template = input_data.get("tag_filter_template", None)
         tag_weight_template = input_data.get("tag_weight_template", None)
+        
         negative_prompt = input_data.get("negative_prompt", "")
         steps = input_data.get("steps", 30)
         guidance_scale = input_data.get("guidance_scale", 7.0)
@@ -44,9 +45,15 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         height = input_data.get("height", 768)
         num_images = input_data.get("num_images", 1)
         seeds = input_data.get("seeds", None)
+
         bodyline_prompt = input_data.get("bodyline_prompt", "anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)")
         bodyline_negative_prompt = input_data.get("bodyline_negative_prompt", "(wings:1.6), (clothes:1.4), (garment:1.4), (lighting:1.4), (gray:1.4), (missing limb:1.4), (extra line:1.4), (extra limb:1.4), (extra arm:1.4), (extra legs:1.4), (hair:1.4), (bangs:1.4), (fringe:1.4), (forelock:1.4), (front hair:1.4), (fill:1.4), (ink pool:1.6)")
-
+        bodyline_steps = input_data.get("bodyline_steps", 20)
+        bodyline_guidance_scale = input_data.get("bodyline_guidance_scale", 8.0)
+        bodyline_input_resolution = input_data.get("bodyline_input_resolution", 256)
+        bodyline_output_size = input_data.get("bodyline_output_size", 786)
+        bodyline_seeds = input_data.get("bodyline_seeds", None)
+        
         try:
             if tag_candidate_generation_template:
                 rag_service.set_tag_candidate_generation_template(tag_candidate_generation_template)
@@ -94,15 +101,16 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
             )
             
             # 生成された画像を使ってボディライン生成
-            output_size = bodyline_service.calculate_resize_dimensions(image_result["images"][0], 786)
+            output_size = bodyline_service.calculate_resize_dimensions(image_result["images"][0], bodyline_output_size)
             bodyline_result = await bodyline_service.generate_bodyline(
                 control_images=image_result["images"],
                 prompt=bodyline_prompt,
                 negative_prompt=bodyline_negative_prompt,
-                num_inference_steps=20,
-                guidance_scale=8,
-                input_resolution=256,
-                output_size=output_size
+                num_inference_steps=bodyline_steps,
+                guidance_scale=bodyline_guidance_scale,
+                input_resolution=bodyline_input_resolution,
+                output_size=output_size,
+                seeds=bodyline_seeds
             )
 
             # Base64エンコード

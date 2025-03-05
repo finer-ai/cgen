@@ -41,6 +41,9 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
                 tag_weight_template=None, guidance_scale=7.0, num_inference_steps=30, 
                 width=512, height=768, num_images=1, is_random_seeds=True, seeds=None, 
                 bodyline_prompt=None, bodyline_negative_prompt=None,
+                bodyline_steps=20, bodyline_guidance_scale=8.0,
+                bodyline_input_resolution=256, bodyline_output_size=786,
+                is_random_bodyline_seeds=True, bodyline_seeds=None,
                 api_key="", endpoint_id=""):
     """
     RunPod APIを呼び出して画像を生成する関数
@@ -60,6 +63,12 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
         seeds: 乱数シード
         bodyline_prompt: ボディライン生成用プロンプト
         bodyline_negative_prompt: ボディライン生成用ネガティブプロンプト
+        bodyline_steps: ボディライン生成の推論ステップ数
+        bodyline_guidance_scale: ボディライン生成のガイダンススケール
+        bodyline_input_resolution: ボディライン生成の入力解像度
+        bodyline_output_size: ボディライン生成の出力サイズ
+        is_random_bodyline_seeds: ボディライン生成用シードをランダムにするかどうか
+        bodyline_seeds: ボディライン生成用シード
         api_key: RunPod API Key
         endpoint_id: RunPod Endpoint ID
     
@@ -80,6 +89,18 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
     else:
         seeds = seeds.split(",")
         seeds = [int(seed) for seed in seeds]
+        if len(seeds) < num_images:
+            # 最後のseedを繰り返し使用
+            seeds = seeds + [seeds[-1]] * (num_images - len(seeds))
+
+    if is_random_bodyline_seeds:
+        bodyline_seeds = None
+    else:
+        bodyline_seeds = bodyline_seeds.split(",")
+        bodyline_seeds = [int(seed) for seed in bodyline_seeds]
+        if len(bodyline_seeds) < num_images:
+            # 最後のseedを繰り返し使用
+            bodyline_seeds = bodyline_seeds + [bodyline_seeds[-1]] * (num_images - len(bodyline_seeds))
     
     url = f"https://api.runpod.ai/v2/{endpoint_id}/run"
     
@@ -103,7 +124,11 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
             "num_images": num_images,
             "seeds": seeds,
             "bodyline_prompt": bodyline_prompt,
-            "bodyline_negative_prompt": bodyline_negative_prompt
+            "bodyline_negative_prompt": bodyline_negative_prompt,
+            "bodyline_steps": bodyline_steps,
+            "bodyline_guidance_scale": bodyline_guidance_scale,
+            "bodyline_input_resolution": bodyline_input_resolution,
+            "bodyline_output_size": bodyline_output_size
         }
     }
     
@@ -197,6 +222,9 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
                 subfolder=timestamp
             )
             
+            # seedsの保存
+            seeds = output["parameters"]["image_parameters"]["seeds"]
+            
             # メタデータの保存
             metadata = {
                 "generated_tags": output.get("generated_tags", []),
@@ -283,6 +311,15 @@ def create_ui():
                     value="(wings:1.6), (clothes:1.4), (garment:1.4), (lighting:1.4), (gray:1.4), (missing limb:1.4), (extra line:1.4), (extra limb:1.4), (extra arm:1.4), (extra legs:1.4), (hair:1.4), (bangs:1.4), (fringe:1.4), (forelock:1.4), (front hair:1.4), (fill:1.4), (ink pool:1.6)",
                     lines=2
                 )
+                with gr.Row():
+                    bodyline_guidance_scale = gr.Slider(minimum=1.0, maximum=20.0, value=8.0, step=0.1, label="Bodyline Guidance Scale")
+                    bodyline_steps = gr.Slider(minimum=10, maximum=100, value=20, step=1, label="Bodyline Steps")
+                with gr.Row():
+                    bodyline_input_resolution = gr.Slider(minimum=128, maximum=1024, value=256, step=64, label="Bodyline Input Resolution")
+                    bodyline_output_size = gr.Slider(minimum=512, maximum=2048, value=786, step=64, label="Bodyline Output Size")
+                with gr.Row():
+                    is_random_bodyline_seeds = gr.Checkbox(label="Generate Random Bodyline Seeds", value=True)
+                    bodyline_seeds = gr.Textbox(label="Bodyline Seeds (Random if empty)", placeholder="Enter seed values. For multiple seeds, separate with commas.")
             
             with gr.Accordion("Tag Template Settings", open=False):
                 with gr.Row():
@@ -331,6 +368,9 @@ def create_ui():
                 tag_weight_template, guidance_scale, num_inference_steps,
                 width, height, num_images, is_random_seeds, seeds,
                 bodyline_prompt, bodyline_negative_prompt,
+                bodyline_steps, bodyline_guidance_scale,
+                bodyline_input_resolution, bodyline_output_size,
+                is_random_bodyline_seeds, bodyline_seeds,
                 api_key, endpoint_id
             ],
             outputs=[output_gallery[0], output_gallery[1], output_gallery[2], output_gallery[3], status_text, seeds]
