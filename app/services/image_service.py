@@ -17,6 +17,30 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class ImageService:
     """画像生成サービス"""
+    # def __init__(self):
+    #     # """初期化"""
+    #     # Stable Diffusion XL モデルのロード
+    #     self.pipe = StableDiffusionXLPipeline.from_single_file(
+    #         settings.SD_MODEL_PATH,
+    #         use_safetensors=True,
+    #         torch_dtype=torch.float16,
+    #         variant="fp16"
+    #     )
+        
+    #     # スケジューラー設定
+    #     self.pipe.scheduler = DPMSolverMultistepScheduler.from_config(
+    #         self.pipe.scheduler.config
+    #     )
+        
+    #     # GPUに移動
+    #     self.pipe = self.pipe.to(device)
+        
+    #     # VAEをcache
+    #     self.pipe.enable_vae_tiling()
+        
+    #     # メモリ効率化
+    #     self.pipe.enable_xformers_memory_efficient_attention()
+        
     def __init__(self):
         # """初期化"""
         self.pipe = utils.sd_utils.load_pipeline(settings.SD_MODEL_PATH, device)

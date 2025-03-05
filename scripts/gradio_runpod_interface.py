@@ -50,7 +50,7 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
         tag_normalization_template: タグ正規化テンプレート
         tag_filter_template: タグフィルターテンプレート
         tag_weight_template: タグ重み付けテンプレート
-        guidance_scale: ガイダンススケール（CFGスケール）
+        guidance_scale: ガイダンススケール
         num_inference_steps: 推論ステップ数
         width: 画像の幅
         height: 画像の高さ
@@ -94,7 +94,7 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
             "negative_prompt": negative_prompt,
             "num_images": num_images,
             "steps": num_inference_steps,
-            "cfg_scale": guidance_scale,
+            "guidance_scale": guidance_scale,
             "width": width,
             "height": height,
             "seeds": seeds
@@ -118,15 +118,51 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
             task_id = result.get("id")
             status_url = f"https://api.runpod.ai/v2/{endpoint_id}/status/{task_id}"
             
-            # 最大10分間ポーリング
+            # セッション作成
+            session = requests.Session()
+            session.headers.update(headers)
+            
+            # 最大5分間ポーリング
             for _ in range(60):
-                time.sleep(10)
-                status_response = requests.get(status_url, headers=headers)
-                status_data = status_response.json()
-                print(status_data.get("status"))
-                if status_data.get("status") == "COMPLETED":
-                    result = status_data
-                    break
+                time.sleep(5)
+                print(f"Checking status: {status_url}")
+                try:
+                    # タイムアウトを細かく設定
+                    status_response = session.get(
+                        status_url,
+                        timeout=(3.05, 10)  # (接続タイムアウト, 読み込みタイムアウト)
+                    )
+                    
+                    if status_response.status_code != 200:
+                        print(f"Unexpected status code: {status_response.status_code}")
+                        time.sleep(2)
+                        continue
+                        
+                    status_data = status_response.json()
+                    current_status = status_data.get("status")
+                    print(f"Current status: {current_status}")
+                    
+                    if current_status == "COMPLETED":
+                        result = status_data
+                        break
+                    elif current_status in ["FAILED", "CANCELLED"]:
+                        raise Exception(f"Task failed with status: {current_status}")
+                        
+                except requests.exceptions.Timeout:
+                    print("Request timed out, retrying...")
+                    time.sleep(2)
+                    continue
+                except requests.exceptions.RequestException as e:
+                    print(f"Request error: {e}")
+                    time.sleep(2)
+                    continue
+                except json.JSONDecodeError:
+                    print("Invalid JSON response, retrying...")
+                    time.sleep(2)
+                    continue
+            
+            # セッションのクリーンアップ
+            session.close()
         
         if result.get("status") != "COMPLETED":
             raise Exception(f"API処理エラー: {result}")
@@ -186,62 +222,62 @@ def create_ui():
         gr.Markdown("# Image Generation Interface")
         
         with gr.Row():
-            prompt = gr.Textbox(label="生成プロンプト", placeholder="画像生成のためのプロンプトを入力してください...", lines=3)
-            submit_btn = gr.Button("生成開始", variant="primary")
+            prompt = gr.Textbox(label="Generation Prompt", placeholder="Enter prompts for image generation...", lines=3)
+            submit_btn = gr.Button("Generate", variant="primary")
         
-        with gr.Accordion("詳細設定", open=False):
+        with gr.Accordion("Advanced Settings", open=False):
             with gr.Row():
                 negative_prompt = gr.Textbox(
-                    label="ネガティブプロンプト",
+                    label="Negative Prompt",
                     value="nsfw, sensitive, from behind, lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, missing arms, extra arms, missing legs, extra legs, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry",
                     lines=2
                 )
             
             with gr.Row():
-                guidance_scale = gr.Slider(minimum=1.0, maximum=20.0, value=10.0, step=0.1, label="CFGスケール")
-                num_inference_steps = gr.Slider(minimum=10, maximum=100, value=30, step=1, label="ステップ数")
+                guidance_scale = gr.Slider(minimum=1.0, maximum=20.0, value=10.0, step=0.1, label="Guidance Scale")
+                num_inference_steps = gr.Slider(minimum=10, maximum=100, value=30, step=1, label="Steps")
             
             with gr.Row():
-                width = gr.Slider(minimum=512, maximum=2048, value=832, step=64, label="幅")
-                height = gr.Slider(minimum=512, maximum=2048, value=1216, step=64, label="高さ")
-                num_images = gr.Slider(minimum=1, maximum=4, value=4, step=1, label="生成枚数")
+                width = gr.Slider(minimum=512, maximum=2048, value=832, step=64, label="Width")
+                height = gr.Slider(minimum=512, maximum=2048, value=1216, step=64, label="Height")
+                num_images = gr.Slider(minimum=1, maximum=4, value=4, step=1, label="Number of Images")
                 
             with gr.Row():
-                is_random_seeds = gr.Checkbox(label="シード値をランダムに生成", value=True)
-                seeds = gr.Textbox(label="シード値 (未入力の場合はランダム)", placeholder="シード値を入力してください。複数の場合はカンマ区切りで入力してください。")
+                is_random_seeds = gr.Checkbox(label="Generate Random Seeds", value=True)
+                seeds = gr.Textbox(label="Seeds (Random if empty)", placeholder="Enter seed values. For multiple seeds, separate with commas.")
             
-            with gr.Accordion("タグテンプレート設定", open=False):
+            with gr.Accordion("Tag Template Settings", open=False):
                 tag_candidate_generation_template = gr.Textbox(
-                    label="タグ候補生成テンプレート", 
+                    label="Tag Candidate Generation Template", 
                     value=TAG_CANDIDATE_GENERATION_TEMPLATE,
                     lines=6
                 )
                 tag_normalization_template = gr.Textbox(
-                    label="タグ正規化テンプレート", 
+                    label="Tag Normalization Template", 
                     value=TAG_NORMALIZATION_TEMPLATE,
                     lines=6
                 )
                 tag_filter_template = gr.Textbox(
-                    label="タグフィルターテンプレート", 
+                    label="Tag Filter Template", 
                     value=TAG_FILTER_TEMPLATE,
                     lines=6
                 )
                 tag_weight_template = gr.Textbox(
-                    label="タグ重み付けテンプレート", 
+                    label="Tag Weighting Template", 
                     value=TAG_WEIGHT_TEMPLATE,
                     lines=6
                 )
             
             with gr.Row():
-                api_key = gr.Textbox(label="RunPod API Key (未入力の場合は環境変数から取得)", type="password")
-                endpoint_id = gr.Textbox(label="RunPod Endpoint ID (未入力の場合は環境変数から取得)")
+                api_key = gr.Textbox(label="RunPod API Key (Uses environment variable if empty)", type="password")
+                endpoint_id = gr.Textbox(label="RunPod Endpoint ID (Uses environment variable if empty)")
         
         with gr.Row():
-            output_gallery1 = gr.Gallery(label="生成結果", columns=1, height=500, object_fit="contain")
-            output_gallery2 = gr.Gallery(label="生成結果", columns=1, height=500, object_fit="contain")
-            output_gallery3 = gr.Gallery(label="生成結果", columns=1, height=500, object_fit="contain")
-            output_gallery4 = gr.Gallery(label="生成結果", columns=1, height=500, object_fit="contain")
-        status_text = gr.Textbox(label="ステータス", interactive=False)
+            output_gallery1 = gr.Gallery(label="Generated Results", columns=1, height=500, object_fit="contain")
+            output_gallery2 = gr.Gallery(label="Generated Results", columns=1, height=500, object_fit="contain")
+            output_gallery3 = gr.Gallery(label="Generated Results", columns=1, height=500, object_fit="contain")
+            output_gallery4 = gr.Gallery(label="Generated Results", columns=1, height=500, object_fit="contain")
+        status_text = gr.Textbox(label="Status", interactive=False)
 
         output_gallery = [output_gallery1, output_gallery2, output_gallery3, output_gallery4]
         

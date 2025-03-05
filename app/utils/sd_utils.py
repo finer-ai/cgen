@@ -77,7 +77,7 @@ def load_pipeline(model_name: str, device: torch.device, vae: Optional[Autoencod
 
         pipe = pipeline(
             model_name,
-            vae=vae,
+            # vae=vae,
             torch_dtype=torch.float16,
             custom_pipeline="lpw_stable_diffusion_xl",
             use_safetensors=True,

@@ -17,6 +17,9 @@ from model_downloader import download_models
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# モデルダウンロード 開発時
+download_models()
+
 # サービスのインスタンス化
 rag_service = RAGService()
 dart_service = DartService()

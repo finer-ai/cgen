@@ -119,7 +119,7 @@ def main():
     parser.add_argument('--negative-prompt', help='Negative prompt for image generation')
     parser.add_argument('--num-images', type=int, help='Number of images to generate')
     parser.add_argument('--steps', type=int, help='Number of generation steps')
-    parser.add_argument('--cfg-scale', type=float, help='CFG scale')
+    parser.add_argument('--guidance-scale', type=float, help='GUIDANCE scale')
     parser.add_argument('--width', type=int, help='Image width')
     parser.add_argument('--height', type=int, help='Image height')
     parser.add_argument('--endpoint-id', help='RunPod endpoint ID')

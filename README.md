@@ -225,7 +225,7 @@ OPENAI_API_KEY=your-openai-api-key
 
 # 画像生成パラメータ
 DEFAULT_STEPS=20
-DEFAULT_CFG_SCALE=7.0
+DEFAULT_GUIDANCE_SCALE=7.0
 DEFAULT_WIDTH=512
 DEFAULT_HEIGHT=768
 ```
@@ -244,7 +244,7 @@ python gradio_runpod_interface.py
 1. Webブラウザで`http://localhost:7860`にアクセス
 2. プロンプト入力欄に生成したい画像の説明を入力
 3. 必要に応じて詳細設定を調整
-   - CFGスケール
+   - ガイダンススケール
    - ステップ数
    - 画像サイズ
    - 生成枚数
@@ -327,7 +327,7 @@ python gradio_runpod_interface.py
 **症状**: `Blank image generated` または `Low quality image`
 
 **解決策**:
-- CFGスケールを調整（通常7-9が適切）
+- ガイダンススケールを調整（通常7-9が適切）
 - ステップ数を増やす（20-30程度）
 - ネガティブプロンプトを設定
 
