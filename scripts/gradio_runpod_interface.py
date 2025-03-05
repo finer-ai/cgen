@@ -39,7 +39,9 @@ def save_images(images: list, output_dir: Path, prefix: str = "generated", subfo
 def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=None, 
                 tag_normalization_template=None, tag_filter_template=None, 
                 tag_weight_template=None, guidance_scale=7.0, num_inference_steps=30, 
-                width=512, height=768, num_images=1, is_random_seeds=True, seeds=None, api_key="", endpoint_id=""):
+                width=512, height=768, num_images=1, is_random_seeds=True, seeds=None, 
+                bodyline_prompt=None, bodyline_negative_prompt=None,
+                api_key="", endpoint_id=""):
     """
     RunPod APIを呼び出して画像を生成する関数
     
@@ -56,6 +58,8 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
         height: 画像の高さ
         num_images: 生成する画像の枚数
         seeds: 乱数シード
+        bodyline_prompt: ボディライン生成用プロンプト
+        bodyline_negative_prompt: ボディライン生成用ネガティブプロンプト
         api_key: RunPod API Key
         endpoint_id: RunPod Endpoint ID
     
@@ -92,12 +96,14 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
             "tag_filter_template": tag_filter_template,
             "tag_weight_template": tag_weight_template,
             "negative_prompt": negative_prompt,
-            "num_images": num_images,
             "steps": num_inference_steps,
             "guidance_scale": guidance_scale,
             "width": width,
             "height": height,
-            "seeds": seeds
+            "num_images": num_images,
+            "seeds": seeds,
+            "bodyline_prompt": bodyline_prompt,
+            "bodyline_negative_prompt": bodyline_negative_prompt
         }
     }
     
@@ -209,12 +215,32 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
                 img = Image.open(io.BytesIO(img_data))
                 bodyline_data = base64.b64decode(bodyline_b64.split(",")[1] if "," in bodyline_b64 else bodyline_b64)
                 bodyline = Image.open(io.BytesIO(bodyline_data))
-                images[i] = [img, bodyline]
+                # images[i] = [img, bodyline]
+                images[i] = [bodyline]
 
         return *images, json.dumps(output["parameters"], indent=2, ensure_ascii=False), None #', '.join(output["parameters"]["seeds"])
 
     except Exception as e:
         return *[None]*4, f"エラーが発生しました: {str(e)}", None
+
+# テンプレートを再読み込みする関数を追加
+def reload_templates():
+    """テンプレートモジュールを再読み込みする"""
+    import importlib
+    import templates
+    importlib.reload(templates)
+    from templates import (
+        TAG_CANDIDATE_GENERATION_TEMPLATE,
+        TAG_NORMALIZATION_TEMPLATE,
+        TAG_FILTER_TEMPLATE,
+        TAG_WEIGHT_TEMPLATE
+    )
+    return (
+        TAG_CANDIDATE_GENERATION_TEMPLATE,
+        TAG_NORMALIZATION_TEMPLATE,
+        TAG_FILTER_TEMPLATE,
+        TAG_WEIGHT_TEMPLATE
+    )
 
 # Gradio UIの構築
 def create_ui():
@@ -246,7 +272,22 @@ def create_ui():
                 is_random_seeds = gr.Checkbox(label="Generate Random Seeds", value=True)
                 seeds = gr.Textbox(label="Seeds (Random if empty)", placeholder="Enter seed values. For multiple seeds, separate with commas.")
             
+            with gr.Accordion("Bodyline Settings", open=False):
+                bodyline_prompt = gr.Textbox(
+                    label="Bodyline Prompt",
+                    value="anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)",
+                    lines=2
+                )
+                bodyline_negative_prompt = gr.Textbox(
+                    label="Bodyline Negative Prompt",
+                    value="(wings:1.6), (clothes:1.4), (garment:1.4), (lighting:1.4), (gray:1.4), (missing limb:1.4), (extra line:1.4), (extra limb:1.4), (extra arm:1.4), (extra legs:1.4), (hair:1.4), (bangs:1.4), (fringe:1.4), (forelock:1.4), (front hair:1.4), (fill:1.4), (ink pool:1.6)",
+                    lines=2
+                )
+            
             with gr.Accordion("Tag Template Settings", open=False):
+                with gr.Row():
+                    reload_templates_btn = gr.Button("テンプレートを再読み込み", variant="secondary")
+
                 tag_candidate_generation_template = gr.Textbox(
                     label="Tag Candidate Generation Template", 
                     value=TAG_CANDIDATE_GENERATION_TEMPLATE,
@@ -273,10 +314,10 @@ def create_ui():
                 endpoint_id = gr.Textbox(label="RunPod Endpoint ID (Uses environment variable if empty)")
         
         with gr.Row():
-            output_gallery1 = gr.Gallery(label="Generated Results", columns=1, height=500, object_fit="contain")
-            output_gallery2 = gr.Gallery(label="Generated Results", columns=1, height=500, object_fit="contain")
-            output_gallery3 = gr.Gallery(label="Generated Results", columns=1, height=500, object_fit="contain")
-            output_gallery4 = gr.Gallery(label="Generated Results", columns=1, height=500, object_fit="contain")
+            output_gallery1 = gr.Gallery(label="Generated Results", columns=1, height=200, object_fit="contain")
+            output_gallery2 = gr.Gallery(label="Generated Results", columns=1, height=200, object_fit="contain")
+            output_gallery3 = gr.Gallery(label="Generated Results", columns=1, height=200, object_fit="contain")
+            output_gallery4 = gr.Gallery(label="Generated Results", columns=1, height=200, object_fit="contain")
         status_text = gr.Textbox(label="Status", interactive=False)
 
         output_gallery = [output_gallery1, output_gallery2, output_gallery3, output_gallery4]
@@ -288,9 +329,23 @@ def create_ui():
                 prompt, negative_prompt, tag_candidate_generation_template,
                 tag_normalization_template, tag_filter_template,
                 tag_weight_template, guidance_scale, num_inference_steps,
-                width, height, num_images, is_random_seeds, seeds, api_key, endpoint_id
+                width, height, num_images, is_random_seeds, seeds,
+                bodyline_prompt, bodyline_negative_prompt,
+                api_key, endpoint_id
             ],
             outputs=[output_gallery[0], output_gallery[1], output_gallery[2], output_gallery[3], status_text, seeds]
+        )
+
+        # テンプレート再読み込みボタンのクリックイベント
+        reload_templates_btn.click(
+            fn=reload_templates,
+            inputs=[],
+            outputs=[
+                tag_candidate_generation_template,
+                tag_normalization_template,
+                tag_filter_template,
+                tag_weight_template
+            ]
         )
     
     return app

@@ -81,8 +81,8 @@ Important rules for weight application:
    - Do not add weights based on assumptions or general knowledge
    - Only add weights when there is clear evidence in the context
 
-2. POSE-RELATED weights (:1.8):
-   - Apply :1.8 to ALL pose-contributing tags when the context specifically requests a pose
+2. POSE-RELATED weights (:1.3):
+   - Apply :1.3 to ALL pose-contributing tags when the context specifically requests a pose
    - This includes:
      a) Direct pose tags: standing, sitting, jumping, running, lying, kneeling, etc.
      b) Body part position tags: arms_up, crossed_legs, spread_arms, hands_in_pockets, etc.
@@ -115,33 +115,33 @@ Important rules for weight application:
    - Only consider explicit modifiers or very strong contextual implications
    - Do not add weights based on subtle implications or assumptions
    - When in doubt, leave the tag without weights
-   - Pose weights (:1.8) can stack with mood/modifier weights
+   - Pose weights (:1.3) can stack with mood/modifier weights
 
 # Examples ####
 Example 1 (Pose with modifiers):
 Context: ちょっとエッチな感じで女の子がジャンプしているポーズを描いてください。スカートがふわっとなっています。
 Tags: original, 1girl, jumping, solo, sexually_suggestive, skirt, smile, thighhighs, wind_lift
-Output: original, 1girl, (jumping:1.8), solo, (sexually_suggestive:0.3), (skirt:0.3), smile, (thighhighs:0.3), (wind_lift:1.8)
+Output: original, 1girl, (jumping:1.3), solo, (sexually_suggestive:0.3), (skirt:0.3), smile, (thighhighs:0.3), (wind_lift:1.3)
 
 Example 2 (Simple pose):
 Context: 女の子が両手を広げてバランスを取っているポーズを描いてください。
 Tags: original, 1girl, standing, spread_arms, balancing, skirt
-Output: original, 1girl, (standing:1.8), (spread_arms:1.8), (balancing:1.8), skirt
+Output: original, 1girl, (standing:1.3), (spread_arms:1.3), (balancing:1.3), skirt
 
 Example 3 (Mixed modifiers with pose):
 Context: すごく可愛らしい女の子が、ちょっとセクシーな感じで後ろを振り返るポーズ。
 Tags: original, 1girl, looking_back, turning, cute, sexually_suggestive, smile
-Output: original, 1girl, (looking_back:1.8), (turning:1.8), (cute:1.7), (sexually_suggestive:0.3), (smile:1.7)
+Output: original, 1girl, (looking_back:1.3), (turning:1.3), (cute:1.7), (sexually_suggestive:0.3), (smile:1.7)
 
 Example 4 (Dynamic pose):
 Context: 風で制服がなびいている中、ジャンプしている女の子を描いてください。
 Tags: original, 1girl, jumping, school_uniform, wind, floating_hair, skirt_flip
-Output: original, 1girl, (jumping:1.8), school_uniform, (wind:1.8), (floating_hair:1.8), (skirt_flip:1.8)
+Output: original, 1girl, (jumping:1.3), school_uniform, (wind:1.3), (floating_hair:1.3), (skirt_flip:1.3)
 
 Example 5 (No clear modifiers):
 Context: 放課後の教室で本を読んでいる女の子を描いてください。
 Tags: original, 1girl, classroom, reading, book, school_uniform, afternoon
-Output: original, 1girl, classroom, (reading:1.8), book, school_uniform, afternoon
+Output: original, 1girl, classroom, (reading:1.3), book, school_uniform, afternoon
 
 Context: {context_prompt}
 

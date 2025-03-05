@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     root_path: str = "/app"
     DART_MODEL_PATH: str = os.getenv("DART_MODEL_PATH", f"{root_path}/models/dart")
     DART_REPO_ID: str = os.getenv("DART_REPO_ID", "p1atdev/dart-v2-moe-sft")
-    SD_MODEL_PATH: str = os.getenv("SD_MODEL_PATH", f"{root_path}/models/animagine-xl-4.0.safetensors")
-    SD_REPO_ID: str = os.getenv("SD_REPO_ID", "Linaqruf/animagine-xl-4.0")
+    SD_MODEL_PATH: str = os.getenv("SD_MODEL_PATH", "cagliostrolab/animagine-xl-4.0")
+    # SD_REPO_ID: str = os.getenv("SD_REPO_ID", "Linaqruf/animagine-xl-4.0")
     LLAMA_MODEL_PATH: str = os.getenv("LLAMA_MODEL_PATH", f"{root_path}/models/llama3.1")
     LLAMA_REPO_ID: str = os.getenv("LLAMA_REPO_ID", "meta-llama/Llama-3.1-8B-Instruct")
     MISTRAL_MODEL_PATH: str = os.getenv("MISTRAL_MODEL_PATH", f"{root_path}/models/mistral")
@@ -54,12 +54,13 @@ class Settings(BaseSettings):
     # モデルのパスとURL設定
     MODEL_DIR: ClassVar[str] = f"{root_path}/models"
     MODEL_CONFIGS: List[Dict[str, Any]] = [
-        {
-            "name": "animagine-xl-4.0",
-            "path": f"{MODEL_DIR}/animagine-xl-4.0.safetensors",
-            "url": "https://huggingface.co/cagliostrolab/animagine-xl-4.0/resolve/main/animagine-xl-4.0.safetensors",
-            "requires_auth": False
-        },
+        # {
+        #     "name": "animagine-xl-4.0",
+        #     # "path": f"{MODEL_DIR}/animagine-xl-4.0.safetensors",
+        #     "path": "cagliostrolab/animagine-xl-4.0",
+        #     "url": "https://huggingface.co/cagliostrolab/animagine-xl-4.0/resolve/main/animagine-xl-4.0.safetensors",
+        #     "requires_auth": False
+        # },
         {
             "name": "sotai-sd-model",
             "path": f"{MODEL_DIR}/LoRAMergeModel_animepose_outline_sotai.fp16.safetensors",
