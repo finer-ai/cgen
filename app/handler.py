@@ -1,6 +1,6 @@
 import runpod
 import base64
-from typing import Dict, Any
+from typing import Dict, Any, List, Tuple
 from services.rag_service import RAGService
 from services.dart_service import DartService
 from services.image_service import ImageService
@@ -26,33 +26,15 @@ dart_service = DartService()
 image_service = ImageService()
 bodyline_service = BodylineService()
 
-async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
-    """RunPodのハンドラー関数"""
-    # 入力データの取得
-    input_data = event["input"]
-    # パラメータの取得
-    prompt = input_data.get("prompt")
-    tag_candidate_generation_template = input_data.get("tag_candidate_generation_template", None)
-    tag_normalization_template = input_data.get("tag_normalization_template", None)
-    tag_filter_template = input_data.get("tag_filter_template", None)
-    tag_weight_template = input_data.get("tag_weight_template", None)
-    
-    negative_prompt = input_data.get("negative_prompt", "")
-    steps = input_data.get("steps", 30)
-    guidance_scale = input_data.get("guidance_scale", 7.0)
-    width = input_data.get("width", 512)
-    height = input_data.get("height", 768)
-    num_images = input_data.get("num_images", 1)
-    seeds = input_data.get("seeds", None)
-
-    bodyline_prompt = input_data.get("bodyline_prompt", "anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)")
-    bodyline_negative_prompt = input_data.get("bodyline_negative_prompt", "(wings:1.6), (clothes:1.4), (garment:1.4), (lighting:1.4), (gray:1.4), (missing limb:1.4), (extra line:1.4), (extra limb:1.4), (extra arm:1.4), (extra legs:1.4), (hair:1.4), (bangs:1.4), (fringe:1.4), (forelock:1.4), (front hair:1.4), (fill:1.4), (ink pool:1.6)")
-    bodyline_steps = input_data.get("bodyline_steps", 20)
-    bodyline_guidance_scale = input_data.get("bodyline_guidance_scale", 8.0)
-    bodyline_input_resolution = input_data.get("bodyline_input_resolution", 256)
-    bodyline_output_size = input_data.get("bodyline_output_size", 786)
-    bodyline_seeds = input_data.get("bodyline_seeds", None)
-    
+async def generate_prompt_tags(
+    prompt: str,
+    tag_candidate_generation_template: str = None,
+    tag_normalization_template: str = None,
+    tag_filter_template: str = None,
+    tag_weight_template: str = None
+) -> List[str]:
+    """プロンプトからタグを生成する関数"""
+    # テンプレートの設定
     if tag_candidate_generation_template:
         rag_service.set_tag_candidate_generation_template(tag_candidate_generation_template)
         print("tag_candidate_generation_template registered")
@@ -66,6 +48,7 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         dart_service.set_tag_weight_template(tag_weight_template)
         print("tag_weight_template registered")
 
+    # プロンプト処理
     if prompt.startswith("prompt:"):
         joined_tags = [tag.strip() for tag in prompt.split("prompt:")[1].split(",")] + ["masterpiece", "high score", "great score", "absurdres"]
     else:
@@ -84,11 +67,31 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         )
         quality_tags = ["masterpiece", "high score", "great score", "absurdres"]
         joined_tags = filtered_tags + quality_tags
+    
     print("joined_tags", joined_tags)
+    return joined_tags
 
+async def generate_images(
+    tags: List[str],
+    negative_prompt: str = "",
+    steps: int = 30,
+    guidance_scale: float = 7.0,
+    width: int = 512,
+    height: int = 768,
+    num_images: int = 1,
+    seeds: List[int] = None,
+    bodyline_prompt: str = "anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)",
+    bodyline_negative_prompt: str = "(wings:1.6), (clothes:1.4), (garment:1.4), (lighting:1.4), (gray:1.4), (missing limb:1.4), (extra line:1.4), (extra limb:1.4), (extra arm:1.4), (extra legs:1.4), (hair:1.4), (bangs:1.4), (fringe:1.4), (forelock:1.4), (front hair:1.4), (fill:1.4), (ink pool:1.6)",
+    bodyline_steps: int = 20,
+    bodyline_guidance_scale: float = 8.0,
+    bodyline_input_resolution: int = 256,
+    bodyline_output_size: int = 786,
+    bodyline_seeds: List[int] = None
+) -> Dict[str, Any]:
+    """タグから画像とボディラインを生成する関数"""
     # 画像生成
     image_result = await image_service.generate_image(
-        tags=joined_tags,
+        tags=tags,
         steps=steps,
         guidance_scale=guidance_scale,
         width=width,
@@ -129,12 +132,117 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "images": image_base64s,
         "bodylines": bodyline_base64s,
-        "generated_tags": joined_tags,
         "parameters": {
             "image_parameters": image_result["parameters"],
             "bodyline_parameters": bodyline_result["parameters"]
         }
     }
+
+async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
+    """RunPodのハンドラー関数
+    
+    mode:
+        - "prompt_only": プロンプト生成のみ実行
+        - "image_only": 画像生成のみ実行（tagsパラメータが必要）
+        - "full" または未指定: プロンプト生成と画像生成の両方を実行
+    """
+    # 入力データの取得
+    input_data = event["input"]
+    
+    # 実行モードの取得（デフォルトは両方実行）
+    mode = input_data.get("mode", "full")
+    
+    # 結果を格納する辞書
+    result = {}
+    
+    # プロンプト生成モードまたは両方実行モードの場合
+    if mode in ["prompt_only", "full"]:
+        # プロンプト関連パラメータの取得
+        prompt = input_data.get("prompt")
+        tag_candidate_generation_template = input_data.get("tag_candidate_generation_template", None)
+        tag_normalization_template = input_data.get("tag_normalization_template", None)
+        tag_filter_template = input_data.get("tag_filter_template", None)
+        tag_weight_template = input_data.get("tag_weight_template", None)
+        
+        # プロンプトからタグを生成
+        joined_tags = await generate_prompt_tags(
+            prompt=prompt,
+            tag_candidate_generation_template=tag_candidate_generation_template,
+            tag_normalization_template=tag_normalization_template,
+            tag_filter_template=tag_filter_template,
+            tag_weight_template=tag_weight_template
+        )
+        
+        # 結果に生成されたタグを追加
+        result["generated_tags"] = joined_tags
+        
+        # プロンプト生成のみの場合はここで終了
+        if mode == "prompt_only":
+            return result
+    
+    # 画像生成モードまたは両方実行モードの場合
+    if mode in ["image_only", "full"]:
+        # 画像生成関連パラメータの取得
+        negative_prompt = input_data.get("negative_prompt", "")
+        steps = input_data.get("steps", 30)
+        guidance_scale = input_data.get("guidance_scale", 7.0)
+        width = input_data.get("width", 512)
+        height = input_data.get("height", 768)
+        num_images = input_data.get("num_images", 1)
+        seeds = input_data.get("seeds", None)
+
+        # ボディライン生成関連パラメータの取得
+        bodyline_prompt = input_data.get("bodyline_prompt", "anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)")
+        bodyline_negative_prompt = input_data.get("bodyline_negative_prompt", "(wings:1.6), (clothes:1.4), (garment:1.4), (lighting:1.4), (gray:1.4), (missing limb:1.4), (extra line:1.4), (extra limb:1.4), (extra arm:1.4), (extra legs:1.4), (hair:1.4), (bangs:1.4), (fringe:1.4), (forelock:1.4), (front hair:1.4), (fill:1.4), (ink pool:1.6)")
+        bodyline_steps = input_data.get("bodyline_steps", 20)
+        bodyline_guidance_scale = input_data.get("bodyline_guidance_scale", 8.0)
+        bodyline_input_resolution = input_data.get("bodyline_input_resolution", 256)
+        bodyline_output_size = input_data.get("bodyline_output_size", 786)
+        bodyline_seeds = input_data.get("bodyline_seeds", None)
+        
+        # 画像生成のみの場合は、入力からタグを取得
+        if mode == "image_only":
+            tags = input_data.get("tags", [])
+            if not tags:
+                return {"error": "画像生成のみモードの場合、'tags'パラメータが必要です"}
+        else:
+            # 両方実行モードの場合は、プロンプト生成で得られたタグを使用
+            tags = joined_tags
+        
+        # タグから画像とボディラインを生成
+        image_result = await generate_images(
+            tags=tags,
+            negative_prompt=negative_prompt,
+            steps=steps,
+            guidance_scale=guidance_scale,
+            width=width,
+            height=height,
+            num_images=num_images,
+            seeds=seeds,
+            bodyline_prompt=bodyline_prompt,
+            bodyline_negative_prompt=bodyline_negative_prompt,
+            bodyline_steps=bodyline_steps,
+            bodyline_guidance_scale=bodyline_guidance_scale,
+            bodyline_input_resolution=bodyline_input_resolution,
+            bodyline_output_size=bodyline_output_size,
+            bodyline_seeds=bodyline_seeds
+        )
+        
+        # 結果に画像生成結果を追加
+        result["images"] = image_result["images"]
+        result["bodylines"] = image_result["bodylines"]
+        result["parameters"] = image_result["parameters"]
+        
+        # 画像生成のみの場合は使用したタグも追加
+        if mode == "image_only":
+            result["used_tags"] = tags
+    
+    # モードが不正な場合
+    else:
+        return {"error": "不正なモードです。'prompt_only', 'image_only', または 'full'を指定してください。"}
+    
+    # 最終結果を返却
+    return result
 
 async def test():
     # タイムスタンプ付きのディレクトリ名を作成
