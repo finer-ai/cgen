@@ -35,25 +35,134 @@ def save_images(images: list, output_dir: Path, prefix: str = "generated", subfo
     
     return saved_paths
 
-# RunPod APIを呼び出す関数
-def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=None, 
-                tag_normalization_template=None, tag_filter_template=None, 
-                tag_weight_template=None, guidance_scale=7.0, num_inference_steps=30, 
+# テキストからプロンプトを生成するAPI呼び出し
+def generate_prompt_from_text(text_prompt, tag_candidate_generation_template=None, 
+                             tag_normalization_template=None, tag_filter_template=None, 
+                             tag_weight_template=None):
+    """
+    テキスト説明からプロンプトを生成するRunPod API呼び出し関数
+    
+    Args:
+        text_prompt: テキストプロンプト
+        tag_candidate_generation_template: タグ候補生成テンプレート
+        tag_normalization_template: タグ正規化テンプレート
+        tag_filter_template: タグフィルターテンプレート
+        tag_weight_template: タグ重み付けテンプレート
+    
+    Returns:
+        生成されたプロンプト
+    """
+    if not text_prompt.strip():
+        return "", "エラー: テキストプロンプトが空です。プロンプトを生成するためのテキストを入力してください。"
+    
+    api_key = os.environ.get("RUNPOD_API_KEY", "")
+    endpoint_id = os.environ.get("RUNPOD_ENDPOINT_ID", "")
+    
+    if not endpoint_id:
+        return "", "エラー: Endpoint IDが設定されていません"
+    
+    if not api_key:
+        return "", "エラー: API KeyまたはEndpoint IDが設定されていません"
+    
+    url = f"https://api.runpod.ai/v2/{endpoint_id}/run"
+    
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "input": {
+            "mode": "prompt_only",  # プロンプト生成のみモード
+            "prompt": text_prompt,
+            "tag_candidate_generation_template": tag_candidate_generation_template,
+            "tag_normalization_template": tag_normalization_template,
+            "tag_filter_template": tag_filter_template,
+            "tag_weight_template": tag_weight_template
+        }
+    }
+    
+    # Noneの値を持つキーを削除
+    payload["input"] = {k: v for k, v in payload["input"].items() if v is not None}
+    
+    print(f"プロンプト生成APIリクエスト送信: {json.dumps(payload, indent=2, ensure_ascii=False)}")
+    
+    try:
+        # タイムアウトを2分に設定
+        response = requests.post(url, headers=headers, json=payload, timeout=120)
+        response.raise_for_status()
+        
+        result = response.json()
+        status = result.get("status")
+        
+        if status == "IN_QUEUE" or status == "IN_PROGRESS":
+            task_id = result.get("id")
+            status_url = f"https://api.runpod.ai/v2/{endpoint_id}/status/{task_id}"
+            
+            # セッション作成
+            session = requests.Session()
+            session.headers.update(headers)
+            
+            # 最大2分間ポーリング
+            for _ in range(24):
+                time.sleep(5)
+                try:
+                    status_response = session.get(status_url, timeout=(3.05, 10))
+                    
+                    if status_response.status_code != 200:
+                        print(f"Unexpected status code: {status_response.status_code}")
+                        time.sleep(2)
+                        continue
+                        
+                    status_data = status_response.json()
+                    current_status = status_data.get("status")
+                    print(f"Current status: {current_status}")
+                    
+                    if current_status == "COMPLETED":
+                        result = status_data
+                        break
+                    elif current_status in ["FAILED", "CANCELLED"]:
+                        raise Exception(f"Task failed with status: {current_status}")
+                        
+                except Exception as e:
+                    print(f"Error during status check: {e}")
+                    time.sleep(2)
+                    continue
+            
+            # セッションのクリーンアップ
+            session.close()
+        
+        if result.get("status") != "COMPLETED":
+            raise Exception(f"API処理エラー: {result}")
+        
+        output = result.get("output", {})
+        generated_tags = output.get("generated_tags", [])
+        
+        if not generated_tags:
+            return "", "エラー: タグを生成できませんでした。別のテキストで試してください。"
+        
+        # タグをカンマ区切りの文字列に変換
+        prompt_string = ", ".join(generated_tags)
+        
+        return prompt_string, None
+        
+    except Exception as e:
+        return "", f"エラーが発生しました: {str(e)}"
+
+# RunPod APIを呼び出す関数を変更
+def generate_images_from_prompt(generated_prompt, negative_prompt="", 
+                guidance_scale=7.0, num_inference_steps=30, 
                 width=512, height=768, num_images=1, is_random_seeds=True, seeds=None, 
                 bodyline_prompt=None, bodyline_negative_prompt=None,
                 bodyline_steps=20, bodyline_guidance_scale=8.0,
                 bodyline_input_resolution=256, bodyline_output_size=786,
                 is_random_bodyline_seeds=True, bodyline_seeds=None):
     """
-    RunPod APIを呼び出して画像を生成する関数
+    生成されたプロンプトから画像を生成する関数
     
     Args:
-        prompt: 生成プロンプト
+        generated_prompt: 生成済みのプロンプト（カンマ区切りのタグ）
         negative_prompt: ネガティブプロンプト
-        tag_candidate_generation_template: タグ候補生成テンプレート
-        tag_normalization_template: タグ正規化テンプレート
-        tag_filter_template: タグフィルターテンプレート
-        tag_weight_template: タグ重み付けテンプレート
         guidance_scale: ガイダンススケール
         num_inference_steps: 推論ステップ数
         width: 画像の幅
@@ -74,14 +183,17 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
     Returns:
         生成された画像のリスト
     """
+    if not generated_prompt.strip():
+        return *[None]*4, "エラー: 生成プロンプトが空です。先にプロンプトを生成してください。", seeds, bodyline_seeds
+    
     api_key = os.environ.get("RUNPOD_API_KEY", "")
     endpoint_id = os.environ.get("RUNPOD_ENDPOINT_ID", "")
     
     if not endpoint_id:
-        raise ValueError("Endpoint IDが設定されていません")
+        return *[None]*4, "エラー: Endpoint IDが設定されていません", seeds, bodyline_seeds
     
     if not api_key:
-        raise ValueError("API KeyまたはEndpoint IDが設定されていません")
+        return *[None]*4, "エラー: API KeyまたはEndpoint IDが設定されていません", seeds, bodyline_seeds
     
     if is_random_seeds:
         seeds = None
@@ -108,13 +220,13 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
         "Content-Type": "application/json"
     }
     
+    # タグリストの作成
+    tags = [tag.strip() for tag in generated_prompt.split(",")]
+    
     payload = {
         "input": {
-            "prompt": prompt,
-            "tag_candidate_generation_template": tag_candidate_generation_template,
-            "tag_normalization_template": tag_normalization_template,
-            "tag_filter_template": tag_filter_template,
-            "tag_weight_template": tag_weight_template,
+            "mode": "image_only",  # 画像生成のみモード
+            "tags": tags,
             "negative_prompt": negative_prompt,
             "steps": num_inference_steps,
             "guidance_scale": guidance_scale,
@@ -127,14 +239,15 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
             "bodyline_steps": bodyline_steps,
             "bodyline_guidance_scale": bodyline_guidance_scale,
             "bodyline_input_resolution": bodyline_input_resolution,
-            "bodyline_output_size": bodyline_output_size
+            "bodyline_output_size": bodyline_output_size,
+            "bodyline_seeds": bodyline_seeds
         }
     }
     
     # Noneの値を持つキーを削除
     payload["input"] = {k: v for k, v in payload["input"].items() if v is not None}
     
-    print(f"APIリクエスト送信: {json.dumps(payload, indent=2, ensure_ascii=False)}")
+    print(f"画像生成APIリクエスト送信: {json.dumps(payload, indent=2, ensure_ascii=False)}")
     
     try:
         # タイムアウトを10分に設定
@@ -225,7 +338,7 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
             
             # メタデータの保存
             metadata = {
-                "generated_tags": output.get("generated_tags", []),
+                "used_tags": output.get("used_tags", []),
                 "parameters": output.get("parameters", {})
             }
             
@@ -278,8 +391,12 @@ def create_ui():
         gr.Markdown("# Image Generation Interface")
         
         with gr.Row():
-            prompt = gr.Textbox(label="Generation Prompt", placeholder="Enter prompts for image generation...", lines=3)
-            submit_btn = gr.Button("Generate", variant="primary")
+            text_prompt = gr.Textbox(label="テキスト説明", placeholder="画像にしたい内容を自然な文章で説明してください...", lines=3)
+            generate_prompt_btn = gr.Button("プロンプト生成", variant="secondary")
+        
+        with gr.Row():
+            generated_prompt = gr.Textbox(label="生成されたプロンプト", placeholder="生成されたプロンプトがここに表示されます...", lines=3)
+            generate_image_btn = gr.Button("画像生成", variant="primary")
         
         with gr.Accordion("Advanced Settings", open=False):
             with gr.Row():
@@ -357,13 +474,26 @@ def create_ui():
 
         output_gallery = [output_gallery1, output_gallery2, output_gallery3, output_gallery4]
         
-        # 送信ボタンのクリックイベント
-        submit_btn.click(
-            fn=call_runpod,
+        # プロンプト生成ボタンのクリックイベント
+        generate_prompt_btn.click(
+            fn=generate_prompt_from_text,
             inputs=[
-                prompt, negative_prompt, tag_candidate_generation_template,
+                text_prompt, tag_candidate_generation_template,
                 tag_normalization_template, tag_filter_template,
-                tag_weight_template, guidance_scale, num_inference_steps,
+                tag_weight_template
+            ],
+            outputs=[
+                generated_prompt,
+                status_text
+            ]
+        )
+        
+        # 画像生成ボタンのクリックイベント
+        generate_image_btn.click(
+            fn=generate_images_from_prompt,
+            inputs=[
+                generated_prompt, negative_prompt,
+                guidance_scale, num_inference_steps,
                 width, height, num_images, is_random_seeds, seeds,
                 bodyline_prompt, bodyline_negative_prompt,
                 bodyline_steps, bodyline_guidance_scale,
