@@ -1,6 +1,7 @@
 import os
 import requests
 from tqdm import tqdm
+from huggingface_hub import snapshot_download
 from core.config import settings
 import logging
 
@@ -43,15 +44,35 @@ def ensure_models_downloaded() -> None:
     """必要なモデルファイルが存在しない場合はダウンロードする"""
     for model_config in settings.MODEL_CONFIGS:
         model_path = model_config["path"]
-        if not os.path.exists(model_path):
-            logger.info(f"Downloading {model_config['name']}...")
+        
+        # パスに拡張子がない場合は、Hugging Faceのリポジトリとして扱う
+        if not os.path.splitext(model_path)[1]:
+            logger.info(f"Downloading repository {model_config['name']}...")
             try:
-                download_file(
-                    url=model_config["url"],
-                    path=model_path,
-                    requires_auth=model_config["requires_auth"]
+                if model_config["requires_auth"] and not settings.HF_TOKEN:
+                    raise ValueError("HF_TOKEN is not set")
+                
+                snapshot_download(
+                    repo_id=model_path,
+                    token=settings.HF_TOKEN if model_config["requires_auth"] else None,
+                    local_dir=os.path.join("models", model_config["name"]),
+                    local_dir_use_symlinks=False
                 )
-                logger.info(f"Successfully downloaded {model_config['name']}")
+                logger.info(f"Successfully downloaded repository {model_config['name']}")
             except Exception as e:
-                logger.error(f"Failed to download {model_config['name']}: {str(e)}")
-                raise 
+                logger.error(f"Failed to download repository {model_config['name']}: {str(e)}")
+                raise
+        else:
+            # 通常のファイルダウンロード
+            if not os.path.exists(model_path):
+                logger.info(f"Downloading {model_config['name']}...")
+                try:
+                    download_file(
+                        url=model_config["url"],
+                        path=model_path,
+                        requires_auth=model_config["requires_auth"]
+                    )
+                    logger.info(f"Successfully downloaded {model_config['name']}")
+                except Exception as e:
+                    logger.error(f"Failed to download {model_config['name']}: {str(e)}")
+                    raise 

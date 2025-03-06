@@ -28,121 +28,113 @@ bodyline_service = BodylineService()
 
 async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
     """RunPodのハンドラー関数"""
-    try:
-        # 入力データの取得
-        input_data = event["input"]
-        # パラメータの取得
-        prompt = input_data.get("prompt")
-        tag_candidate_generation_template = input_data.get("tag_candidate_generation_template", None)
-        tag_normalization_template = input_data.get("tag_normalization_template", None)
-        tag_filter_template = input_data.get("tag_filter_template", None)
-        tag_weight_template = input_data.get("tag_weight_template", None)
+    # 入力データの取得
+    input_data = event["input"]
+    # パラメータの取得
+    prompt = input_data.get("prompt")
+    tag_candidate_generation_template = input_data.get("tag_candidate_generation_template", None)
+    tag_normalization_template = input_data.get("tag_normalization_template", None)
+    tag_filter_template = input_data.get("tag_filter_template", None)
+    tag_weight_template = input_data.get("tag_weight_template", None)
+    
+    negative_prompt = input_data.get("negative_prompt", "")
+    steps = input_data.get("steps", 30)
+    guidance_scale = input_data.get("guidance_scale", 7.0)
+    width = input_data.get("width", 512)
+    height = input_data.get("height", 768)
+    num_images = input_data.get("num_images", 1)
+    seeds = input_data.get("seeds", None)
+
+    bodyline_prompt = input_data.get("bodyline_prompt", "anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)")
+    bodyline_negative_prompt = input_data.get("bodyline_negative_prompt", "(wings:1.6), (clothes:1.4), (garment:1.4), (lighting:1.4), (gray:1.4), (missing limb:1.4), (extra line:1.4), (extra limb:1.4), (extra arm:1.4), (extra legs:1.4), (hair:1.4), (bangs:1.4), (fringe:1.4), (forelock:1.4), (front hair:1.4), (fill:1.4), (ink pool:1.6)")
+    bodyline_steps = input_data.get("bodyline_steps", 20)
+    bodyline_guidance_scale = input_data.get("bodyline_guidance_scale", 8.0)
+    bodyline_input_resolution = input_data.get("bodyline_input_resolution", 256)
+    bodyline_output_size = input_data.get("bodyline_output_size", 786)
+    bodyline_seeds = input_data.get("bodyline_seeds", None)
+    
+    if tag_candidate_generation_template:
+        rag_service.set_tag_candidate_generation_template(tag_candidate_generation_template)
+        print("tag_candidate_generation_template registered")
+    if tag_normalization_template:
+        rag_service.set_tag_normalization_template(tag_normalization_template)
+        print("tag_normalization_template registered")
+    if tag_filter_template:
+        dart_service.set_tag_filter_template(tag_filter_template)
+        print("tag_filter_template registered")
+    if tag_weight_template:
+        dart_service.set_tag_weight_template(tag_weight_template)
+        print("tag_weight_template registered")
+
+    if prompt.startswith("prompt:"):
+        joined_tags = [tag.strip() for tag in prompt.split("prompt:")[1].split(",")] + ["masterpiece", "high score", "great score", "absurdres"]
+    else:
+        # RAGでタグ候補を取得
+        tag_candidates = await rag_service.generate_tag_candidates(prompt)
+        print("tag_candidates", tag_candidates)
         
-        negative_prompt = input_data.get("negative_prompt", "")
-        steps = input_data.get("steps", 30)
-        guidance_scale = input_data.get("guidance_scale", 7.0)
-        width = input_data.get("width", 512)
-        height = input_data.get("height", 768)
-        num_images = input_data.get("num_images", 1)
-        seeds = input_data.get("seeds", None)
+        # Dartでタグを補完
+        final_tags = await dart_service.generate_final_tags(tag_candidates)
+        print("final_tags", final_tags)
 
-        bodyline_prompt = input_data.get("bodyline_prompt", "anime pose, girl, (white background:1.5), (monochrome:1.5), full body, sketch, eyes, breasts, (slim legs, skinny legs:1.2)")
-        bodyline_negative_prompt = input_data.get("bodyline_negative_prompt", "(wings:1.6), (clothes:1.4), (garment:1.4), (lighting:1.4), (gray:1.4), (missing limb:1.4), (extra line:1.4), (extra limb:1.4), (extra arm:1.4), (extra legs:1.4), (hair:1.4), (bangs:1.4), (fringe:1.4), (forelock:1.4), (front hair:1.4), (fill:1.4), (ink pool:1.6)")
-        bodyline_steps = input_data.get("bodyline_steps", 20)
-        bodyline_guidance_scale = input_data.get("bodyline_guidance_scale", 8.0)
-        bodyline_input_resolution = input_data.get("bodyline_input_resolution", 256)
-        bodyline_output_size = input_data.get("bodyline_output_size", 786)
-        bodyline_seeds = input_data.get("bodyline_seeds", None)
-        
-        try:
-            if tag_candidate_generation_template:
-                rag_service.set_tag_candidate_generation_template(tag_candidate_generation_template)
-                print("tag_candidate_generation_template registered")
-            if tag_normalization_template:
-                rag_service.set_tag_normalization_template(tag_normalization_template)
-                print("tag_normalization_template registered")
-            if tag_filter_template:
-                dart_service.set_tag_filter_template(tag_filter_template)
-                print("tag_filter_template registered")
-            if tag_weight_template:
-                dart_service.set_tag_weight_template(tag_weight_template)
-                print("tag_weight_template registered")
+        # コンテキストに基づいてタグをフィルタリング
+        filtered_tags = await dart_service.filter_tags_by_context(
+            tags_str=", ".join(final_tags),
+            context_prompt=prompt
+        )
+        quality_tags = ["masterpiece", "high score", "great score", "absurdres"]
+        joined_tags = filtered_tags + quality_tags
+    print("joined_tags", joined_tags)
 
-            if prompt.startswith("prompt:"):
-                joined_tags = [tag.strip() for tag in prompt.split("prompt:")[1].split(",")] + ["masterpiece", "high score", "great score", "absurdres"]
-            else:
-                # RAGでタグ候補を取得
-                tag_candidates = await rag_service.generate_tag_candidates(prompt)
-                print("tag_candidates", tag_candidates)
-                
-                # Dartでタグを補完
-                final_tags = await dart_service.generate_final_tags(tag_candidates)
-                print("final_tags", final_tags)
+    # 画像生成
+    image_result = await image_service.generate_image(
+        tags=joined_tags,
+        steps=steps,
+        guidance_scale=guidance_scale,
+        width=width,
+        height=height,
+        negative_prompt=negative_prompt,
+        num_images=num_images,
+        seeds=seeds
+    )
+    
+    # 生成された画像を使ってボディライン生成
+    output_size = bodyline_service.calculate_resize_dimensions(image_result["images"][0], bodyline_output_size)
+    bodyline_result = await bodyline_service.generate_bodyline(
+        control_images=image_result["images"],
+        prompt=bodyline_prompt,
+        negative_prompt=bodyline_negative_prompt,
+        num_inference_steps=bodyline_steps,
+        guidance_scale=bodyline_guidance_scale,
+        input_resolution=bodyline_input_resolution,
+        output_size=output_size,
+        seeds=bodyline_seeds
+    )
 
-                # コンテキストに基づいてタグをフィルタリング
-                filtered_tags = await dart_service.filter_tags_by_context(
-                    tags_str=", ".join(final_tags),
-                    context_prompt=prompt
-                )
-                quality_tags = ["masterpiece", "high score", "great score", "absurdres"]
-                joined_tags = filtered_tags + quality_tags
-            print("joined_tags", joined_tags)
+    # Base64エンコード
+    image_base64s = []
+    for image in image_result["images"]:
+        buffered = io.BytesIO()
+        image.save(buffered, format="PNG")
+        image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        image_base64s.append(image_base64)
 
-            # 画像生成
-            image_result = await image_service.generate_image(
-                tags=joined_tags,
-                steps=steps,
-                guidance_scale=guidance_scale,
-                width=width,
-                height=height,
-                negative_prompt=negative_prompt,
-                num_images=num_images,
-                seeds=seeds
-            )
-            
-            # 生成された画像を使ってボディライン生成
-            output_size = bodyline_service.calculate_resize_dimensions(image_result["images"][0], bodyline_output_size)
-            bodyline_result = await bodyline_service.generate_bodyline(
-                control_images=image_result["images"],
-                prompt=bodyline_prompt,
-                negative_prompt=bodyline_negative_prompt,
-                num_inference_steps=bodyline_steps,
-                guidance_scale=bodyline_guidance_scale,
-                input_resolution=bodyline_input_resolution,
-                output_size=output_size,
-                seeds=bodyline_seeds
-            )
+    bodyline_base64s = []
+    for image in bodyline_result["images"]:
+        buffered = io.BytesIO()
+        image.save(buffered, format="PNG")
+        image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        bodyline_base64s.append(image_base64)
 
-            # Base64エンコード
-            image_base64s = []
-            for image in image_result["images"]:
-                buffered = io.BytesIO()
-                image.save(buffered, format="PNG")
-                image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
-                image_base64s.append(image_base64)
-
-            bodyline_base64s = []
-            for image in bodyline_result["images"]:
-                buffered = io.BytesIO()
-                image.save(buffered, format="PNG")
-                image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
-                bodyline_base64s.append(image_base64)
-
-            return {
-                "images": image_base64s,
-                "bodylines": bodyline_base64s,
-                "generated_tags": joined_tags,
-                "parameters": {
-                    "image_parameters": image_result["parameters"],
-                    "bodyline_parameters": bodyline_result["parameters"]
-                }
-            }
-            
-        except (RAGError, DartError, ImageGenerationError) as e:
-            return {"error": f"Generation failed: {str(e)}"}
-
-    except Exception as e:
-        return {"error": f"Unexpected error: {str(e)}"}
+    return {
+        "images": image_base64s,
+        "bodylines": bodyline_base64s,
+        "generated_tags": joined_tags,
+        "parameters": {
+            "image_parameters": image_result["parameters"],
+            "bodyline_parameters": bodyline_result["parameters"]
+        }
+    }
 
 async def test():
     # タイムスタンプ付きのディレクトリ名を作成

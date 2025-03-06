@@ -242,8 +242,7 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
                 img = Image.open(io.BytesIO(img_data))
                 bodyline_data = base64.b64decode(bodyline_b64.split(",")[1] if "," in bodyline_b64 else bodyline_b64)
                 bodyline = Image.open(io.BytesIO(bodyline_data))
-                # images[i] = [img, bodyline]
-                images[i] = [bodyline]
+                images[i] = [bodyline, img]
 
         return *images, json.dumps(output["parameters"], indent=2, ensure_ascii=False), None #', '.join(output["parameters"]["seeds"])
 
@@ -350,10 +349,10 @@ def create_ui():
                 endpoint_id = gr.Textbox(label="RunPod Endpoint ID (Uses environment variable if empty)")
         
         with gr.Row():
-            output_gallery1 = gr.Gallery(label="Generated Results", columns=1, height=200, object_fit="contain")
-            output_gallery2 = gr.Gallery(label="Generated Results", columns=1, height=200, object_fit="contain")
-            output_gallery3 = gr.Gallery(label="Generated Results", columns=1, height=200, object_fit="contain")
-            output_gallery4 = gr.Gallery(label="Generated Results", columns=1, height=200, object_fit="contain")
+            output_gallery1 = gr.Gallery(label="Generated Results", columns=1, height=400, object_fit="contain")
+            output_gallery2 = gr.Gallery(label="Generated Results", columns=1, height=400, object_fit="contain")
+            output_gallery3 = gr.Gallery(label="Generated Results", columns=1, height=400, object_fit="contain")
+            output_gallery4 = gr.Gallery(label="Generated Results", columns=1, height=400, object_fit="contain")
         status_text = gr.Textbox(label="Status", interactive=False)
 
         output_gallery = [output_gallery1, output_gallery2, output_gallery3, output_gallery4]

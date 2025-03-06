@@ -54,13 +54,12 @@ class Settings(BaseSettings):
     # モデルのパスとURL設定
     MODEL_DIR: ClassVar[str] = f"{root_path}/models"
     MODEL_CONFIGS: List[Dict[str, Any]] = [
-        # {
-        #     "name": "animagine-xl-4.0",
-        #     # "path": f"{MODEL_DIR}/animagine-xl-4.0.safetensors",
-        #     "path": "cagliostrolab/animagine-xl-4.0",
-        #     "url": "https://huggingface.co/cagliostrolab/animagine-xl-4.0/resolve/main/animagine-xl-4.0.safetensors",
-        #     "requires_auth": False
-        # },
+        {
+            "name": "animagine-xl-4.0",
+            "path": "cagliostrolab/animagine-xl-4.0",
+            "url": None,
+            "requires_auth": False
+        },
         {
             "name": "sotai-sd-model",
             "path": f"{MODEL_DIR}/LoRAMergeModel_animepose_outline_sotai.fp16.safetensors",

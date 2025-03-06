@@ -13,7 +13,8 @@ from diffusers import (
     StableDiffusionXLPipeline,
 )
 import logging
-
+import os
+from core.config import settings
 MAX_SEED = np.iinfo(np.int32).max
 
 
@@ -69,22 +70,27 @@ def preprocess_image_dimensions(width, height):
 def load_pipeline(model_name: str, device: torch.device, vae: Optional[AutoencoderKL] = None) -> Any:
     """Load the Stable Diffusion pipeline."""
     try:
-        pipeline = (
-            StableDiffusionXLPipeline.from_single_file
-            if model_name.endswith(".safetensors")
-            else StableDiffusionXLPipeline.from_pretrained
-        )
+        # ローカルのモデルパスを探す
+        local_model_path = None
+        for config in settings.MODEL_CONFIGS:
+            if config["name"] == model_name and not os.path.splitext(config["path"])[1]:
+                local_model_path = os.path.join("models", config["name"])
+                break
 
-        pipe = pipeline(
-            model_name,
-            # vae=vae,
+        # ローカルパスが存在する場合はそれを使用、そうでない場合は直接model_nameを使用
+        model_path = local_model_path if local_model_path and os.path.exists(local_model_path) else config["path"]
+        print(f"model_path: {model_path}")
+        
+        pipeline = StableDiffusionXLPipeline.from_pretrained(
+            model_path,
             torch_dtype=torch.float16,
             custom_pipeline="lpw_stable_diffusion_xl",
             use_safetensors=True,
             add_watermarker=False
         )
-        pipe.to(device)
-        return pipe
+        
+        pipeline.to(device)
+        return pipeline
     except Exception as e:
         logging.error(f"Failed to load pipeline: {str(e)}", exc_info=True)
         raise
