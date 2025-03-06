@@ -45,19 +45,22 @@ def ensure_models_downloaded() -> None:
     for model_config in settings.MODEL_CONFIGS:
         model_path = model_config["path"]
         
-        # パスに拡張子がない場合は、Hugging Faceのリポジトリとして扱う
-        if not os.path.splitext(model_path)[1]:
+        # URLが指定されていない場合は、Hugging Faceのリポジトリとして扱う
+        if not model_config.get("url"):
             logger.info(f"Downloading repository {model_config['name']}...")
             try:
                 if model_config["requires_auth"] and not settings.HF_TOKEN:
                     raise ValueError("HF_TOKEN is not set")
                 
-                snapshot_download(
-                    repo_id=model_path,
-                    token=settings.HF_TOKEN if model_config["requires_auth"] else None,
-                    local_dir=os.path.join("models", model_config["name"]),
-                    local_dir_use_symlinks=False
-                )
+                local_dir = os.path.join("models", model_config["name"])
+                # すでにダウンロード済みの場合はスキップ
+                if not os.path.exists(local_dir):
+                    snapshot_download(
+                        repo_id=model_path,
+                        token=settings.HF_TOKEN if model_config["requires_auth"] else None,
+                        local_dir=local_dir,
+                        local_dir_use_symlinks=False
+                    )
                 logger.info(f"Successfully downloaded repository {model_config['name']}")
             except Exception as e:
                 logger.error(f"Failed to download repository {model_config['name']}: {str(e)}")

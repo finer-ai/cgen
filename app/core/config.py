@@ -57,7 +57,6 @@ class Settings(BaseSettings):
         {
             "name": "animagine-xl-4.0",
             "path": "cagliostrolab/animagine-xl-4.0",
-            "url": None,
             "requires_auth": False
         },
         {

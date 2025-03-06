@@ -43,8 +43,7 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
                 bodyline_prompt=None, bodyline_negative_prompt=None,
                 bodyline_steps=20, bodyline_guidance_scale=8.0,
                 bodyline_input_resolution=256, bodyline_output_size=786,
-                is_random_bodyline_seeds=True, bodyline_seeds=None,
-                api_key="", endpoint_id=""):
+                is_random_bodyline_seeds=True, bodyline_seeds=None):
     """
     RunPod APIを呼び出して画像を生成する関数
     
@@ -75,13 +74,13 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
     Returns:
         生成された画像のリスト
     """
-    if not api_key:
-        api_key = os.environ.get("RUNPOD_API_KEY", "")
+    api_key = os.environ.get("RUNPOD_API_KEY", "")
+    endpoint_id = os.environ.get("RUNPOD_ENDPOINT_ID", "")
     
     if not endpoint_id:
-        endpoint_id = os.environ.get("RUNPOD_ENDPOINT_ID", "")
+        raise ValueError("Endpoint IDが設定されていません")
     
-    if not api_key or not endpoint_id:
+    if not api_key:
         raise ValueError("API KeyまたはEndpoint IDが設定されていません")
     
     if is_random_seeds:
@@ -244,10 +243,15 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
                 bodyline = Image.open(io.BytesIO(bodyline_data))
                 images[i] = [bodyline, img]
 
-        return *images, json.dumps(output["parameters"], indent=2, ensure_ascii=False), None #', '.join(output["parameters"]["seeds"])
+        return (
+            *images, 
+            json.dumps(output["parameters"], indent=2, ensure_ascii=False), 
+            ', '.join(str(seed) for seed in output["parameters"]["image_parameters"]["seeds"]),
+            ', '.join(str(seed) for seed in output["parameters"]["bodyline_parameters"]["seeds"])
+        )
 
     except Exception as e:
-        return *[None]*4, f"エラーが発生しました: {str(e)}", None
+        return *[None]*4, f"エラーが発生しました: {str(e)}", seeds, bodyline_seeds
 
 # テンプレートを再読み込みする関数を追加
 def reload_templates():
@@ -343,11 +347,7 @@ def create_ui():
                     value=TAG_WEIGHT_TEMPLATE,
                     lines=6
                 )
-            
-            with gr.Row():
-                api_key = gr.Textbox(label="RunPod API Key (Uses environment variable if empty)", type="password")
-                endpoint_id = gr.Textbox(label="RunPod Endpoint ID (Uses environment variable if empty)")
-        
+
         with gr.Row():
             output_gallery1 = gr.Gallery(label="Generated Results", columns=1, height=400, object_fit="contain")
             output_gallery2 = gr.Gallery(label="Generated Results", columns=1, height=400, object_fit="contain")
@@ -369,9 +369,16 @@ def create_ui():
                 bodyline_steps, bodyline_guidance_scale,
                 bodyline_input_resolution, bodyline_output_size,
                 is_random_bodyline_seeds, bodyline_seeds,
-                api_key, endpoint_id
             ],
-            outputs=[output_gallery[0], output_gallery[1], output_gallery[2], output_gallery[3], status_text, seeds]
+            outputs=[
+                output_gallery[0],
+                output_gallery[1],
+                output_gallery[2],
+                output_gallery[3],
+                status_text,
+                seeds,
+                bodyline_seeds
+            ]
         )
 
         # テンプレート再読み込みボタンのクリックイベント
