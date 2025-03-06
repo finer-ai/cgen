@@ -156,7 +156,6 @@ def call_runpod(prompt, negative_prompt="", tag_candidate_generation_template=No
             # 最大5分間ポーリング
             for _ in range(60):
                 time.sleep(5)
-                print(f"Checking status: {status_url}")
                 try:
                     # タイムアウトを細かく設定
                     status_response = session.get(

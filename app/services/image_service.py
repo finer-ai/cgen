@@ -63,12 +63,12 @@ class ImageService:
     async def generate_image(
         self,
         tags: list[str],
-        steps: Optional[int] = None,
-        guidance_scale: Optional[float] = None,
-        width: Optional[int] = None,
-        height: Optional[int] = None,
-        negative_prompt: Optional[str] = None,
-        num_images: Optional[int] = None,
+        steps: Optional[int] = 20,
+        guidance_scale: Optional[float] = 7.0,
+        width: Optional[int] = 512,
+        height: Optional[int] = 768,
+        negative_prompt: Optional[str] = "lowres, bad anatomy, bad hands, cropped, worst quality",
+        num_images: Optional[int] = 1,
         seeds: Optional[list[int]] = None,
     ) -> Dict[str, Any]:
         """タグから画像を生成"""
@@ -76,15 +76,6 @@ class ImageService:
             # Memory management
             torch.cuda.empty_cache()
             gc.collect()
-
-            # パラメータのデフォルト値設定
-            steps = steps or 20
-            guidance_scale = guidance_scale or 7.0
-            width = width or 512
-            height = height or 768
-            negative_prompt = negative_prompt or "lowres, bad anatomy, bad hands, cropped, worst quality"
-            num_images = num_images or 1
-            seeds = seeds or None
             
             if seeds is None:
                 seeds = [random.randint(0, np.iinfo(np.int32).max) for _ in range(num_images)]

@@ -8,6 +8,8 @@ import base64
 from core.config import settings
 import cv2
 import numpy as np
+import random
+import utils.sd_utils
 
 class BodylineService:
     def __init__(self):
@@ -125,9 +127,13 @@ class BodylineService:
         num_inference_steps: int = 20,
         guidance_scale: float = 7.0,
         input_resolution: int = 512,
-        output_size: Tuple[int, int] = (768, 768)
+        output_size: Tuple[int, int] = (768, 768),
+        seeds: List[int] = None
     ) -> List[Dict[str, Any]]:
         """複数の画像からボディラインを生成"""
+        if seeds is None:
+            seeds = [random.randint(0, np.iinfo(np.int32).max) for _ in range(len(control_images))]
+        
         # 入力画像のリサイズ
         input_size = self.calculate_resize_dimensions(control_images[0], input_resolution)
         resized_images = []
@@ -137,7 +143,8 @@ class BodylineService:
 
         # 各画像に対して個別にパイプラインを呼び出す
         images = []
-        for control_image in resized_images:
+        for i, control_image in enumerate(resized_images):
+            generator = utils.sd_utils.seed_everything(seeds[i])
             result = self.pipeline(
             prompt=prompt,
             negative_prompt=negative_prompt,
@@ -170,6 +177,8 @@ class BodylineService:
                 "negative_prompt": negative_prompt,
                 "num_inference_steps": num_inference_steps,
                 "guidance_scale": guidance_scale,
-                "output_size": output_size
+                "input_resolution": input_resolution,
+                "output_size": output_size,
+                "seeds": seeds
             }
         } 
