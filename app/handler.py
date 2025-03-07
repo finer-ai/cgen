@@ -49,24 +49,21 @@ async def generate_prompt_tags(
         print("tag_weight_template registered")
 
     # プロンプト処理
-    if prompt.startswith("prompt:"):
-        joined_tags = [tag.strip() for tag in prompt.split("prompt:")[1].split(",")] + ["masterpiece", "high score", "great score", "absurdres"]
-    else:
-        # RAGでタグ候補を取得
-        tag_candidates = await rag_service.generate_tag_candidates(prompt)
-        print("tag_candidates", tag_candidates)
-        
-        # Dartでタグを補完
-        final_tags = await dart_service.generate_final_tags(tag_candidates)
-        print("final_tags", final_tags)
+    # RAGでタグ候補を取得
+    tag_candidates = await rag_service.generate_tag_candidates(prompt)
+    print("tag_candidates", tag_candidates)
+    
+    # Dartでタグを補完
+    final_tags = await dart_service.generate_final_tags(tag_candidates)
+    print("final_tags", final_tags)
 
-        # コンテキストに基づいてタグをフィルタリング
-        filtered_tags = await dart_service.filter_tags_by_context(
-            tags_str=", ".join(final_tags),
-            context_prompt=prompt
-        )
-        quality_tags = ["masterpiece", "high score", "great score", "absurdres"]
-        joined_tags = filtered_tags + quality_tags
+    # コンテキストに基づいてタグをフィルタリング
+    filtered_tags = await dart_service.filter_tags_by_context(
+        tags_str=", ".join(final_tags),
+        context_prompt=prompt
+    )
+    quality_tags = ["masterpiece", "high score", "great score", "absurdres"]
+    joined_tags = filtered_tags + quality_tags
     
     print("joined_tags", joined_tags)
     return joined_tags
@@ -254,7 +251,6 @@ async def test():
 
     test_data = {
         "input": {
-            # "prompt": "prompt:original, 1girl, solo, (jumping:1.3), jacket, school uniform, pose, miniskirt, brown hair, blue eyes, pleated skirt, red footwear, red jacket, shoes, striped clothes, thighs, white thighhighs",
             "prompt": "本を読みながらジャンプをしている女の子のポーズ",
             "negative_prompt": "nsfw, sensitive, from behind, lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, missing arms, extra arms, missing legs, extra legs, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry",
             "num_images": 2,

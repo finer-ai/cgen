@@ -135,7 +135,6 @@ def main():
       
     prompt = args.prompt or "壁に寄りかかっている女の子。全身"
     # prompt = args.prompt or "壁に寄りかかりながらピースサインをしている女の子のポーズ"
-    # prompt = args.prompt or "prompt:original, 1girl, solo, (jumping:1.8), jacket, school uniform, pose, miniskirt, brown hair, blue eyes, pleated skirt, red footwear, red jacket, shoes, striped clothes, thighs, white thighhighs, expression"
     endpoint_id = args.endpoint_id or os.getenv("RUNPOD_ENDPOINT_ID")
     api_key = args.api_key or os.getenv("RUNPOD_API_KEY")
     negative_prompt = args.negative_prompt or "nsfw, sensitive, from behind, lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, missing arms, extra arms, missing legs, extra legs, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry"

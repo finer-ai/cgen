@@ -73,7 +73,7 @@ def load_pipeline(model_name: str, device: torch.device, vae: Optional[Autoencod
         # ローカルのモデルパスを探す
         local_model_path = None
         for config in settings.MODEL_CONFIGS:
-            if config["name"] == model_name and not os.path.splitext(config["path"])[1]:
+            if config["name"] == model_name and not config.get("url"):
                 local_model_path = os.path.join("models", config["name"])
                 break
 

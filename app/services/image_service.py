@@ -43,7 +43,7 @@ class ImageService:
         
     def __init__(self):
         # """初期化"""
-        self.pipe = utils.sd_utils.load_pipeline(settings.SD_MODEL_PATH, device)
+        self.pipe = utils.sd_utils.load_pipeline("animagine-xl-4.0", device)
         
         # スケジューラー設定
         self.pipe.scheduler = utils.sd_utils.get_scheduler(
