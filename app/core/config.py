@@ -76,6 +76,12 @@ class Settings(BaseSettings):
             "path": f"{MODEL_DIR}/Sotai_1K_ControlNet-epoch=989.ckpt",
             "url": "https://huggingface.co/yeq6x/webui-models/resolve/main/ControlNet/Sotai_1K_ControlNet-epoch%3D989.ckpt",
             "requires_auth": True
+        },
+        {
+            "name": "anime-seg",
+            "path": f"{MODEL_DIR}/anime-seg/isnetis.onnx",
+            "url": "https://huggingface.co/skytnt/anime-seg/resolve/main/isnetis.onnx",
+            "requires_auth": False
         }
     ]
 

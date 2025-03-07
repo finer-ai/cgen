@@ -24,7 +24,7 @@ class RemoveBGService:
     def load_model(self):
         """モデルをロードする"""
         try:
-            model_path = huggingface_hub.hf_hub_download("skytnt/anime-seg", "isnetis.onnx")
+            model_path = os.path.join("models", "anime-seg", "isnetis.onnx")
             self.model = rt.InferenceSession(model_path, providers=self.providers)
             print("背景除去モデルが正常にロードされました！")
         except Exception as e:
