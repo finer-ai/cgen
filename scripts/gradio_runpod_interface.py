@@ -440,7 +440,7 @@ def create_ui():
                     is_random_bodyline_seeds = gr.Checkbox(label="Generate Random Bodyline Seeds", value=True)
                     bodyline_seeds = gr.Textbox(label="Bodyline Seeds (Random if empty)", placeholder="Enter seed values. For multiple seeds, separate with commas.")
             
-            with gr.Accordion("Tag Template Settings", open=False):
+            with gr.Accordion("Tag Template Settings", open=False, visible=False):
                 with gr.Row():
                     reload_templates_btn = gr.Button("テンプレートを再読み込み", variant="secondary")
 

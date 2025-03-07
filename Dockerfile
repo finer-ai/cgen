@@ -35,8 +35,8 @@ RUN pip3 install --no-cache-dir -r requirements.txt && \
 # アプリケーションコードのコピー
 COPY ./app /app/
 
-# モデルダウンロード 本番でのみ
-RUN python3 /app/model_downloader.py
+# # モデルダウンロード 本番でのみ
+# RUN python3 /app/model_downloader.py
 
 # 起動コマンド
 CMD ["python3", "-u", "handler.py"]

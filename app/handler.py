@@ -5,6 +5,7 @@ from services.rag_service import RAGService
 from services.dart_service import DartService
 from services.image_service import ImageService
 from services.bodyline_service import BodylineService
+from services.remove_bg_service import RemoveBGService
 from core.errors import RAGError, DartError, ImageGenerationError
 from PIL import Image
 import io
@@ -25,6 +26,7 @@ rag_service = RAGService()
 dart_service = DartService()
 image_service = ImageService()
 bodyline_service = BodylineService()
+remove_bg_service = RemoveBGService(cpu_only=False)
 
 async def generate_prompt_tags(
     prompt: str,
@@ -141,13 +143,15 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
     mode:
         - "prompt_only": プロンプト生成のみ実行
         - "image_only": 画像生成のみ実行（tagsパラメータが必要）
+        - "remove_bg_diff": 背景除去と差分計算を実行
         - "full" または未指定: プロンプト生成と画像生成の両方を実行
     """
-    # 入力データの取得
+    # 入力の検証
+    if not event or not event.get("input"):
+        return {"error": "入力が不正です"}
+
     input_data = event["input"]
-    
-    # 実行モードの取得（デフォルトは両方実行）
-    mode = input_data.get("mode", "full")
+    mode = input_data.get("mode", "full").lower()
     
     # 結果を格納する辞書
     result = {}
@@ -234,9 +238,40 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         if mode == "image_only":
             result["used_tags"] = tags
     
+    
+    # 背景除去と差分計算モード
+    if mode in ["remove_bg_diff", "image_only", "full"]:
+        if mode == "remove_bg_diff":
+            if not input_data.get("image1") or not input_data.get("image2"):
+                return {"error": "image1とimage2の両方が必要です"}
+            image1_data = input_data["images1"]
+            image2_data = input_data["images2"]
+        else:
+            image1_data = result["images"]
+            image2_data = result["bodylines"]
+            
+        # 背景除去と差分計算
+        diff_images = []
+        white_percentage = []
+        white_pixels_mask2 = []
+        white_pixels_diff = []
+        for i in range(len(image1_data)):
+            res = remove_bg_service.process_images(image1_data[i], image2_data[i])
+            diff_images.append(res["diff"])
+            white_percentage.append(res["white_percentage"])
+            white_pixels_mask2.append(res["white_pixels_mask2"])
+            white_pixels_diff.append(res["white_pixels_diff"])
+            
+        result["remove_bg_diff"] = {
+            "diff": diff_images,
+            "white_percentage": white_percentage,
+            "white_pixels_mask2": white_pixels_mask2,
+            "white_pixels_diff": white_pixels_diff
+        }
+
     # モードが不正な場合
     else:
-        return {"error": "不正なモードです。'prompt_only', 'image_only', または 'full'を指定してください。"}
+        return {"error": "不正なモードです。'prompt_only', 'image_only', 'remove_bg_diff', または 'full'を指定してください。"}
     
     # 最終結果を返却
     return result
