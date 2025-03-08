@@ -62,7 +62,7 @@ class ImageService:
     
     async def generate_image(
         self,
-        tags: list[str],
+        tags: list[str] | str,
         steps: Optional[int] = 20,
         guidance_scale: Optional[float] = 7.0,
         width: Optional[int] = 512,
@@ -73,6 +73,11 @@ class ImageService:
     ) -> Dict[str, Any]:
         """タグから画像を生成"""
         try:
+            if isinstance(tags, str):
+                tags = tags.split(",")
+            else:
+                tags = tags
+
             # Memory management
             torch.cuda.empty_cache()
             gc.collect()
