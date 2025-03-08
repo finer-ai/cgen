@@ -82,7 +82,7 @@ class RemoveBGService:
         
         # 次元が異なる場合はリサイズ
         if mask1_flat.shape != mask2_flat.shape:
-            print(f"警告: マスクのサイズが異なります: {mask1_flat.shape} vs {mask2_flat.shape}")
+            print(f"マスクのサイズが異なるので小さい方のサイズにリサイズします: {mask1_flat.shape} vs {mask2_flat.shape}")
             
             # 小さい方のサイズを取得
             min_height = min(mask1_flat.shape[0], mask2_flat.shape[0])
@@ -114,30 +114,44 @@ class RemoveBGService:
         Returns:
             差分画像、白ピクセルの割合を含む辞書
         """
+        def decode_image(img_data):
+            if isinstance(img_data, str):
+                # 文字列の場合の詳細なデバッグ情報
+                if img_data.startswith('data:image'):
+                    # Base64文字列の場合
+                    img_data = img_data.split(',')[1]
+                    img_bytes = base64.b64decode(img_data)
+                    return cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_UNCHANGED)
+                else:
+                    # Base64エンコードされた画像データの可能性をチェック
+                    try:
+                        img_bytes = base64.b64decode(img_data)
+                        img = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_UNCHANGED)
+                        if img is not None:
+                            return img
+                    except:
+                        pass
+                    # エラーメッセージに詳細情報を含める
+                    preview = img_data[:100] + '...' if len(img_data) > 100 else img_data
+                    raise ValueError(f"Invalid image data format: string must be base64 encoded or data URL. Received: {preview}")
+            elif isinstance(img_data, bytes):
+                # バイト列の場合
+                img = cv2.imdecode(np.frombuffer(img_data, np.uint8), cv2.IMREAD_UNCHANGED)
+                if img is None:
+                    raise ValueError("Failed to decode image bytes")
+                return img
+            elif isinstance(img_data, np.ndarray):
+                # NumPy配列の場合
+                return img_data
+            elif hasattr(img_data, 'convert'):
+                # PILイメージの場合
+                return np.array(img_data.convert('RGBA' if img_data.mode == 'RGBA' else 'RGB'))
+            else:
+                raise ValueError(f"Unsupported image data type: {type(img_data)}")
+
         # 画像データをデコード
-        if isinstance(image1_data, str) and image1_data.startswith('data:image'):
-            # Base64文字列の場合
-            image1_data = image1_data.split(',')[1]
-            image1_bytes = base64.b64decode(image1_data)
-            img1 = cv2.imdecode(np.frombuffer(image1_bytes, np.uint8), cv2.IMREAD_COLOR)
-        elif isinstance(image1_data, bytes):
-            # バイト列の場合
-            img1 = cv2.imdecode(np.frombuffer(image1_data, np.uint8), cv2.IMREAD_COLOR)
-        else:
-            # PILイメージの場合
-            img1 = cv2.cvtColor(np.array(image1_data), cv2.COLOR_RGB2BGR)
-        
-        if isinstance(image2_data, str) and image2_data.startswith('data:image'):
-            # Base64文字列の場合
-            image2_data = image2_data.split(',')[1]
-            image2_bytes = base64.b64decode(image2_data)
-            img2 = cv2.imdecode(np.frombuffer(image2_bytes, np.uint8), cv2.IMREAD_COLOR)
-        elif isinstance(image2_data, bytes):
-            # バイト列の場合
-            img2 = cv2.imdecode(np.frombuffer(image2_data, np.uint8), cv2.IMREAD_COLOR)
-        else:
-            # PILイメージの場合
-            img2 = cv2.cvtColor(np.array(image2_data), cv2.COLOR_RGB2BGR)
+        img1 = decode_image(image1_data)
+        img2 = decode_image(image2_data)
         
         # マスクを取得
         mask1 = self.get_mask(img1)

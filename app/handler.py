@@ -261,7 +261,9 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
             white_percentage.append(res["white_percentage"])
             white_pixels_mask2.append(res["white_pixels_mask2"])
             white_pixels_diff.append(res["white_pixels_diff"])
-            
+        print(white_percentage)
+        print(white_pixels_mask2)
+        print(white_pixels_diff)
         result["remove_bg_diff"] = {
             "diff": diff_images,
             "white_percentage": white_percentage,

@@ -349,12 +349,18 @@ def generate_images_from_prompt(generated_prompt, negative_prompt="",
             print(f"Images and metadata saved to: {output_dir / timestamp}")
             
             # Gradio用の画像変換
-            for i, (img_b64, bodyline_b64) in enumerate(zip(output["images"], output["bodylines"])):
+            for i, (img_b64, bodyline_b64, diff_b64) in enumerate(zip(output["images"], output["bodylines"], output["remove_bg_diff"]["diff"])):
                 img_data = base64.b64decode(img_b64.split(",")[1] if "," in img_b64 else img_b64)
                 img = Image.open(io.BytesIO(img_data))
                 bodyline_data = base64.b64decode(bodyline_b64.split(",")[1] if "," in bodyline_b64 else bodyline_b64)
                 bodyline = Image.open(io.BytesIO(bodyline_data))
-                images[i] = [bodyline, img]
+                diff_data = base64.b64decode(diff_b64.split(",")[1] if "," in diff_b64 else diff_b64)
+                diff = Image.open(io.BytesIO(diff_data))
+                images[i] = [bodyline, img, diff]
+                
+            print(output["remove_bg_diff"]["white_percentage"])
+            print(output["remove_bg_diff"]["white_pixels_mask2"])
+            print(output["remove_bg_diff"]["white_pixels_diff"])
 
         return (
             *images, 
