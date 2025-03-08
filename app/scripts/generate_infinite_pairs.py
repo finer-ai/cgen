@@ -17,12 +17,18 @@ from datetime import datetime
 import json
 import argparse
 
-# 親ディレクトリをパスに追加してappモジュールにアクセスできるようにする
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+# プロジェクトルートへのパスを設定
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, PROJECT_ROOT)
 
-from app.services.dart_service import DartService
-from app.services.image_service import ImageService
-from app.services.bodyline_service import BodylineService
+# appディレクトリへのパスを設定
+APP_ROOT = os.path.join(PROJECT_ROOT, 'app')
+sys.path.insert(0, APP_ROOT)
+
+from core.config import settings
+from services.dart_service import DartService
+from services.image_service import ImageService
+from services.bodyline_service import BodylineService
 
 def setup_output_dirs(base_output_dir):
     """出力ディレクトリの設定と作成"""

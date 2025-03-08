@@ -40,8 +40,27 @@
 基本的な実行方法：
 
 ```bash
+# プロジェクトのルートディレクトリから実行することが重要です
+cd プロジェクトルートディレクトリ
 python -m app.scripts.generate_infinite_pairs --output OUTPUT_DIR [--count COUNT] [--start START]
 ```
+
+#### 実行時の注意点
+
+1. スクリプトは必ずプロジェクトのルートディレクトリから実行してください
+2. 以下のようなディレクトリ構造になっていることを確認してください：
+
+```
+プロジェクトルート/
+├── app/
+│   ├── core/
+│   ├── services/
+│   └── scripts/
+│       └── generate_infinite_pairs.py
+└── requirements.txt
+```
+
+3. 環境変数やモデルファイルが正しく設定されていることを確認してください
 
 #### コマンドライン引数
 
