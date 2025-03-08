@@ -81,6 +81,7 @@ class ImageService:
                 seeds = [random.randint(0, np.iinfo(np.int32).max) for _ in range(num_images)]
 
             # タグをプロンプトに変換
+            print(isinstance(tags, list))
             if isinstance(tags, list):
                 prompt = ", ".join(tags)
             else:
