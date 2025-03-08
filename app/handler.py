@@ -24,6 +24,7 @@ download_models()
 # サービスのインスタンス化
 rag_service = RAGService()
 dart_service = DartService()
+dart_service.initialize_llm()
 image_service = ImageService()
 bodyline_service = BodylineService()
 remove_bg_service = RemoveBGService(cpu_only=False)

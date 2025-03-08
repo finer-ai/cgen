@@ -12,12 +12,8 @@ from utils.llm_utils import load_llm
 class DartService:
     """Dartによるタグ補完サービス"""
     
-    def __init__(self, use_local_llm=False):
-        """初期化
-        
-        Args:
-            llm (LangChainLLM): 使用するLLMオブジェクト
-        """
+    def __init__(self):
+        """初期化 - Dartモデルの初期化のみを行う"""
         # Dartモデルとトークナイザーの読み込み
         self.tokenizer = AutoTokenizer.from_pretrained(settings.DART_REPO_ID, device_map="auto")
         # pad_tokenが設定されていない場合はeos_tokenを使用
@@ -31,6 +27,14 @@ class DartService:
             device_map="auto"
         )
         
+        self.llm = None
+        self.tag_filter_prompt = None
+        self.tag_weight_prompt = None
+        self.tag_filter_chain = None
+        self.tag_weight_chain = None
+
+    def initialize_llm(self, use_local_llm=False):
+        """LLMの初期化とプロンプトテンプレートの設定を行う"""
         self.llm = load_llm(use_local_llm=use_local_llm)
         
         # タグフィルタリング用のプロンプトテンプレート
@@ -133,6 +137,10 @@ Tags: {tags_str}
 Output:""")
 
     def set_tag_filter_template(self, template: str):
+        """タグフィルタリング用のプロンプトテンプレートを設定"""
+        if self.llm is None:
+            raise DartError("LLMが初期化されていません。initialize_llm()を先に呼び出してください。")
+            
         self.tag_filter_prompt = PromptTemplate(
             template=template,
             input_variables=["context_prompt", "tags_str"]
@@ -142,6 +150,10 @@ Output:""")
         )
 
     def set_tag_weight_template(self, template: str):
+        """タグの重み付け用のプロンプトテンプレートを設定"""
+        if self.llm is None:
+            raise DartError("LLMが初期化されていません。initialize_llm()を先に呼び出してください。")
+            
         self.tag_weight_prompt = PromptTemplate(
             template=template,
             input_variables=["context_prompt", "tags_str"]

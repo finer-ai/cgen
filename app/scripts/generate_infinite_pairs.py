@@ -262,6 +262,8 @@ async def main():
     
     # サービスの初期化
     dart_service = DartService()
+    # # LLMの初期化
+    # dart_service.initialize_llm(use_local_llm=False)
     image_service = ImageService()
     bodyline_service = BodylineService()
     
