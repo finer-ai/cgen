@@ -149,7 +149,7 @@ class BodylineService:
             prompt=prompt,
             negative_prompt=negative_prompt,
                 image=[control_image] * len(self.controlnet_models),  # 各ControlNetモデル用に同じ画像を複製
-            num_inference_steps=num_inference_steps,
+                num_inference_steps=num_inference_steps,
                 guidance_scale=guidance_scale,
                 width=output_size[0],
                 height=output_size[1],
@@ -158,7 +158,8 @@ class BodylineService:
                 guess_mode=[True] * len(self.controlnet_models),
                 controlnet_conditioning_scale=self.controlnet_scales,
                 guidance_start=[0.0] * len(self.controlnet_models),
-                guidance_end=[1.0] * len(self.controlnet_models)
+                guidance_end=[1.0] * len(self.controlnet_models),
+                generator=generator
             )
 
             image = result.images[0]

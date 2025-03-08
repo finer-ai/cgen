@@ -211,8 +211,8 @@ class TestBodylineServiceIntegration:
         # テスト用の入力画像を作成
         test_image = Image.open("tests/data/test_pose.jpg").convert('RGB')
         
-        # 長辺786ピクセルにリサイズ
-        output_size = bodyline_service.calculate_resize_dimensions(test_image, 786)
+        # 長辺768ピクセルにリサイズ
+        output_size = bodyline_service.calculate_resize_dimensions(test_image, 768)
         input_size = bodyline_service.calculate_resize_dimensions(test_image, 512)
         test_image = test_image.resize(input_size, Image.Resampling.LANCZOS)
         print(f"Input image dimensions: {test_image.size}")

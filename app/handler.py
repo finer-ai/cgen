@@ -84,7 +84,7 @@ async def generate_images(
     bodyline_steps: int = 20,
     bodyline_guidance_scale: float = 8.0,
     bodyline_input_resolution: int = 256,
-    bodyline_output_size: int = 786,
+    bodyline_output_size: int = 768,
     bodyline_seeds: List[int] = None
 ) -> Dict[str, Any]:
     """タグから画像とボディラインを生成する関数"""
@@ -198,7 +198,7 @@ async def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         bodyline_steps = input_data.get("bodyline_steps", 20)
         bodyline_guidance_scale = input_data.get("bodyline_guidance_scale", 8.0)
         bodyline_input_resolution = input_data.get("bodyline_input_resolution", 256)
-        bodyline_output_size = input_data.get("bodyline_output_size", 786)
+        bodyline_output_size = input_data.get("bodyline_output_size", 768)
         bodyline_seeds = input_data.get("bodyline_seeds", None)
         
         # 画像生成のみの場合は、入力からタグを取得

@@ -155,7 +155,7 @@ def generate_images_from_prompt(generated_prompt, negative_prompt="",
                 width=512, height=768, num_images=1, is_random_seeds=True, seeds=None, 
                 bodyline_prompt=None, bodyline_negative_prompt=None,
                 bodyline_steps=20, bodyline_guidance_scale=8.0,
-                bodyline_input_resolution=256, bodyline_output_size=786,
+                bodyline_input_resolution=256, bodyline_output_size=768,
                 is_random_bodyline_seeds=True, bodyline_seeds=None):
     """
     生成されたプロンプトから画像を生成する関数
@@ -441,7 +441,7 @@ def create_ui():
                     bodyline_steps = gr.Slider(minimum=10, maximum=100, value=20, step=1, label="Bodyline Steps")
                 with gr.Row():
                     bodyline_input_resolution = gr.Slider(minimum=128, maximum=1024, value=256, step=64, label="Bodyline Input Resolution")
-                    bodyline_output_size = gr.Slider(minimum=512, maximum=2048, value=786, step=64, label="Bodyline Output Size")
+                    bodyline_output_size = gr.Slider(minimum=512, maximum=2048, value=768, step=64, label="Bodyline Output Size")
                 with gr.Row():
                     is_random_bodyline_seeds = gr.Checkbox(label="Generate Random Bodyline Seeds", value=True)
                     bodyline_seeds = gr.Textbox(label="Bodyline Seeds (Random if empty)", placeholder="Enter seed values. For multiple seeds, separate with commas.")
