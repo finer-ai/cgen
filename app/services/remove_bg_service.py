@@ -36,12 +36,21 @@ class RemoveBGService:
         画像からマスクを取得する
         
         Args:
-            img: 入力画像
+            img: 入力画像（RGB or RGBA）
             s: サイズ
             
         Returns:
             マスク画像
         """
+        # RGBAの場合は白背景に合成
+        if img.shape[-1] == 4:
+            # 白背景の画像を作成
+            white_bg = np.ones((*img.shape[:2], 3), dtype=np.uint8) * 255
+            # アルファチャンネルを使用して合成
+            alpha = img[..., 3:] / 255.0
+            img_rgb = img[..., :3]
+            img = (img_rgb * alpha + white_bg * (1 - alpha)).astype(np.uint8)
+
         img = (img / 255).astype(np.float32)
         h, w = h0, w0 = img.shape[:-1]
         h, w = (s, int(s * w / h)) if h > w else (int(s * h / w), s)
