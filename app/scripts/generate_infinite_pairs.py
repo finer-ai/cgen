@@ -29,6 +29,9 @@ from core.config import settings
 from services.dart_service import DartService
 from services.image_service import ImageService
 from services.bodyline_service import BodylineService
+from model_downloader import download_models
+# モデルダウンロード 開発時
+download_models()
 
 def setup_output_dirs(base_output_dir):
     """出力ディレクトリの設定と作成"""
