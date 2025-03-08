@@ -73,11 +73,6 @@ class ImageService:
     ) -> Dict[str, Any]:
         """タグから画像を生成"""
         try:
-            if isinstance(tags, str):
-                tags = tags.split(",")
-            else:
-                tags = tags
-
             # Memory management
             torch.cuda.empty_cache()
             gc.collect()
@@ -86,7 +81,10 @@ class ImageService:
                 seeds = [random.randint(0, np.iinfo(np.int32).max) for _ in range(num_images)]
 
             # タグをプロンプトに変換
-            prompt = ", ".join(tags)
+            if isinstance(tags, list):
+                prompt = ", ".join(tags)
+            else:
+                prompt = tags
             
             images = []
             for i in range(num_images):
