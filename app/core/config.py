@@ -12,14 +12,16 @@ class Settings(BaseSettings):
     DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
     
     # モデルパス設定
-    root_path: str = "/app"
-    DART_MODEL_PATH: str = os.getenv("DART_MODEL_PATH", f"{root_path}/models/dart")
+    root_path: str = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    print(f"root_path: {root_path}")
+    MODEL_DIR: ClassVar[str] = f"{root_path}/models"
+    DART_MODEL_PATH: str = os.getenv("DART_MODEL_PATH", f"{MODEL_DIR}/dart")
     DART_REPO_ID: str = os.getenv("DART_REPO_ID", "p1atdev/dart-v2-moe-sft")
     SD_MODEL_PATH: str = os.getenv("SD_MODEL_PATH", "cagliostrolab/animagine-xl-4.0")
     # SD_REPO_ID: str = os.getenv("SD_REPO_ID", "Linaqruf/animagine-xl-4.0")
-    LLAMA_MODEL_PATH: str = os.getenv("LLAMA_MODEL_PATH", f"{root_path}/models/llama3.1")
+    LLAMA_MODEL_PATH: str = os.getenv("LLAMA_MODEL_PATH", f"{MODEL_DIR}/llama3.1")
     LLAMA_REPO_ID: str = os.getenv("LLAMA_REPO_ID", "meta-llama/Llama-3.1-8B-Instruct")
-    MISTRAL_MODEL_PATH: str = os.getenv("MISTRAL_MODEL_PATH", f"{root_path}/models/mistral")
+    MISTRAL_MODEL_PATH: str = os.getenv("MISTRAL_MODEL_PATH", f"{MODEL_DIR}/mistral")
     MISTRAL_REPO_ID: str = os.getenv("MISTRAL_REPO_ID", "mistralai/Mistral-7B-v0.1")
 
     # RAG設定
@@ -35,14 +37,14 @@ class Settings(BaseSettings):
     HF_TOKEN: Optional[str] = os.getenv("HF_TOKEN")
 
     # モデルパス
-    SD15_MODEL_PATH: str = "models/LoRAMergeModel_animepose_outline_sotai.fp16.safetensors"
+    SD15_MODEL_PATH: str = f"{MODEL_DIR}/LoRAMergeModel_animepose_outline_sotai.fp16.safetensors"
     CONTROLNET_CONFIGS: List[Dict[str, Any]] = [
         {
-            "path": "models/Sotai_1K_ControlNet-epoch=989.ckpt",
+            "path": f"{MODEL_DIR}/Sotai_1K_ControlNet-epoch=989.ckpt",
             "conditioning_scale": 1.4
         },
         {
-            "path": "models/Sotai_sketch_ControlNet_epoch=0288_train_loss_epoch=9.7849e-03.ckpt",
+            "path": f"{MODEL_DIR}/Sotai_sketch_ControlNet_epoch=0288_train_loss_epoch=9.7849e-03.ckpt",
             "conditioning_scale": 1.3
         }
     ]
@@ -52,7 +54,6 @@ class Settings(BaseSettings):
     TORCH_DTYPE: str = "float16"
 
     # モデルのパスとURL設定
-    MODEL_DIR: ClassVar[str] = f"{root_path}/models"
     MODEL_CONFIGS: List[Dict[str, Any]] = [
         {
             "name": "animagine-xl-4.0",
